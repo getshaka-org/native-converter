@@ -81,7 +81,7 @@ trait NativeConverter[T]:
 
 A Typeclass lets you add behavior without inheritance. Instead of extending a class or implementing an interface, you create a Typeclass instance that operates on that type, and pass it around. Typeclasses let you add features to types you don't control, aka [Retroactive Polymorphism](https://august.nagro.us/retroactive-polymorphism-scala.html).
 
-In Java, defining, creating, and passing Typeclass instances around would be inconvenient, so people `extend` instead. But Scala 3 makes it easy. When you write `case class User(..) derives NativeConverter`, the scala compiler calls method `NativeConverter::derived`, which generates a `given` instance in User's companion object. When you summon a NativeConverter for User, either with `summon[NativeConverter[User]]` or just `NativeConverter[User]` via the 0-arg `inline def apply[T](using nc: NativeConverter[T]) = nc` helper method in `NativeConverter`, the same instance is returned.
+In Java, defining, creating, and passing Typeclass instances around would be inconvenient, so people `extend` instead. But Scala 3 makes it easy. When you write `case class User(..) derives NativeConverter`, the scala compiler calls method `NativeConverter::derived`, which generates a `given` instance in User's companion object. When you summon a NativeConverter for User, either with `summon[NativeConverter[User]]` or just `NativeConverter[User]` via the 0-arg `apply` helper method in `NativeConverter`, the same instance is returned.
 
 You can summon built-in NativeConverters for all the primitive types:
 
@@ -250,7 +250,7 @@ Nope, derived NativeDecoders are 2x faster, even for simple cases like `User("Jo
 
 The generated JavaScript code is very clean. I was amazed how nice it is when looking at `sbt fastLinkJS` output. This is all possible because of Scala 3's [`inline`](https://dotty.epfl.ch/docs/reference/metaprogramming/inline.html) keyword, and powerful type-level programming capabilities. That's right.. no Macros used whatsoever! The `derives` keyword on type T causes the NativeConverter Typeclass to be auto-generated in T's companion object. Only once, and when first requested.
 
-It is safe to say that I am very impressed with Scala 3. And a big thank you to Sébastien Doeraene and Tobias Schlatter, who are first-rate maintainers of Scala.js.
+It is safe to say that I am very impressed with Scala 3. And a big thank you to Sébastien Doeraene and Tobias Schlatter, who are first-rate maintainers of Scala.js, as well as Jamie Thompson who gave me advice on the conversion of Sum types.
 
 ## License
 https://www.apache.org/licenses/LICENSE-2.0
