@@ -229,14 +229,10 @@ object NativeConverter:
 
   given [A](using nc: NativeConverter[A]): NativeConverter[Option[A]] with
     extension (t: Option[A]) def toNative: js.Any =
-      t.map(v => js.Array(nc.toNative(v))).getOrElse(js.Array())
+      t.map(nc.toNative).getOrElse(null.asInstanceOf[js.Any])
       
     def fromNative(nativeJs: js.Any): Option[A] =
-      val arr = nativeJs.asInstanceOf[js.Array[js.Any]]
-      arr.length match
-        case 0 => None
-        case 1 => Some(nc.fromNative(arr(0)))
-        case _ => throw IllegalArgumentException("Cannot make Option if Array has > 1 element: " + arr)
+      Option(nativeJs).map(nc.fromNative)
 
   /*
   NOW, LETS PROGRAM AT THE TYPE-LEVEL
