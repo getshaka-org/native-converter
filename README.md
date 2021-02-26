@@ -181,16 +181,16 @@ nativeMap.asInstanceOf[js.Dynamic].get(3)
 
 I haven't implemented converters for all the native types, but if you ask me or make a pull request for one that's missing I will merge it.
 
-Option is serialized using a 1-element array if Some, or [] if None:
+Option is serialized with null if None, and the converted value if Some.
 ```Scala
 val nc = NativeConverter[Option[Array[Int]]]
 val some = Some(Array(1,2,3))
 
-// "[[1,2,3]]"
+// "[1,2,3]"
 val someJson = JSON.stringify(nc.toNative(some))
 
 // None
-val none = nc.fromNative(JSON.parse("[]"))
+val none = nc.fromNative(JSON.parse("null"))
 ```
 
 Any [Product](https://www.scala-lang.org/api/current/scala/Product.html) or Sum type (like case classes and enums) can derive a NativeConverter. If the Product is a Singleton (ie, having no parameters) then the type name or [productPrefix](https://www.scala-lang.org/api/current/scala/Product.html#productPrefix:String) is used. Otherwise, an object is created using the parameter names as keys.
@@ -217,7 +217,7 @@ case class X(a: List[String])
 case class Y(b: Option[X]) derives NativeConverter
 
 val y = Y(Some(X(List())))
-val yStr = """ {"b":[{"a":[]}]} """.trim.nn
+val yStr = """ {"b":{"a":[]}} """.trim.nn
 
 assertEquals(yStr, JSON.stringify(y.toNative))
 

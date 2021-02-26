@@ -197,11 +197,12 @@ class JsonTests:
     assertEquals(""" [{"a":[1,2,3],"b":[4,5,6]}]  """.trim, JSON.stringify(composite.toNative))
 
     val some = Some(Array(1,2,3))
-    val someStr = "[[1,2,3]]"
+    val someStr = "[1,2,3]"
     assertEquals(someStr, JSON.stringify(some.toNative))
     assertEquals(some.get(1), NativeConverter[Option[Array[Int]]].fromNative(JSON.parse(someStr)).get(1))
     val n = None
-    assertEquals("[]", JSON.stringify(NativeConverter[Option[Int]].toNative(n)))
+    assertEquals("null", JSON.stringify(NativeConverter[Option[Int]].toNative(n)))
+    assertEquals(n, NativeConverter[Option[Int]].fromNative(JSON.parse("null")))
     try
       NativeConverter[Option[Int]].fromNative(JSON.parse("[1,2]"))
       fail("invalid option")
@@ -210,7 +211,7 @@ class JsonTests:
     case class X(a: List[String])
     case class Y(b: Option[X]) derives NativeConverter
     val y = Y(Some(X(List())))
-    val yStr = """ {"b":[{"a":[]}]} """.trim.nn
+    val yStr = """ {"b":{"a":[]}} """.trim.nn
     assertEquals(yStr, JSON.stringify(y.toNative))
     assertEquals(y, NativeConverter[Y].fromNative(JSON.parse(yStr)))
 
