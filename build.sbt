@@ -6,7 +6,7 @@ lazy val root = project
     name := "native-converter",
     version := "0.1.1-SNAPSHOT",
     
-    scalaVersion := "3.0.0-M3",
+    scalaVersion := "3.0.0-RC1",
     scalacOptions ++= Seq(
       "-Ycheck-init",
       "-Yexplicit-nulls",
