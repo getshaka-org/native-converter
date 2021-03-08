@@ -176,6 +176,12 @@ object NativeConverter:
       
     def fromNative(nativeJs: js.Any): Seq[A] =
       nativeJs.asInstanceOf[js.Array[js.Any]].view.map(nc.fromNative).toSeq
+
+  given [A <: String]: NativeConverter[A] with
+    extension (t: A) def toNative: js.Any = NativeConverter[String].toNative(t)
+
+    def fromNative(nativeJs: js.Any): A =
+      NativeConverter[String].fromNative(nativeJs).asInstanceOf[A]
   
   given [A](using nc: NativeConverter[A]): NativeConverter[Set[A]] with
     extension (t: Set[A]) def toNative: js.Any =

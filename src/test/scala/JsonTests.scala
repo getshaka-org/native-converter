@@ -166,7 +166,7 @@ class JsonTests:
 
   @Test
   def jsonCollectionTest: Unit =
-    import NativeConverter.given
+    import NativeConverter.{given}
 
     val strArr = "[1,2,3]"
     val nativeArr = JSON.parse(strArr)
@@ -216,6 +216,52 @@ class JsonTests:
 
   end jsonCollectionTest
 
+  @Test
+  def literalTypeDerivations(): Unit =
+    /*
+    This works without any changes
+     */
+    type Square = "X"|"O"|Null
+    case class Game1(square: Square) derives NativeConverter
+    assertEquals(""" {"square":"X"}  """.trim, JSON.stringify(Game1("X").toNative))
+
+    /*
+    This works, but only after adding the below typeclass to the NativeConverter
+    Companion object (line 180):
+    
+    given [A <: String]: NativeConverter[A] with
+      extension (t: A) def toNative: js.Any = NativeConverter[String].toNative(t)
+      def fromNative(nativeJs: js.Any): A =
+        NativeConverter[String].fromNative(nativeJs).asInstanceOf[A]
+        
+    Trying to add in this method and not in companion object
+    causes StackOverflow, despite summonInline.
+     */
+    case class Game2(squares: Seq["X"|"Y"]) derives NativeConverter
+    assertEquals(""" {"squares":["X"]}  """.trim, JSON.stringify(Game2(Seq("X")).toNative))
+    
+    /*
+    This also works with the added typeclass
+     */
+    type Squares = Seq["X"|"Y"]
+    case class Game3(squares: Squares) derives NativeConverter
+    assertEquals(""" {"squares":["X"]}  """.trim, JSON.stringify(Game3(Seq("X")).toNative))
+    
+    /*
+    But this does not
+     */
+    type Squares1 = Seq["X"|"Y"|Null]
+    case class Game4(squares: Squares1) derives NativeConverter
+    assertEquals(""" {"squares":["X"]}  """.trim, JSON.stringify(Game4(Seq("X")).toNative))
+    
+    /*
+    Neither does this (different error)
+     */
+    type Squares2 = Seq[Square]
+    case class Game5(squares: Squares2) derives NativeConverter
+    assertEquals(""" {"squares":["X"]}  """.trim, JSON.stringify(Game5(Seq("X")).toNative))
+
+  end literalTypeDerivations
 
 // todo collections, Option
 
