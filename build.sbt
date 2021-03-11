@@ -5,6 +5,7 @@ lazy val root = project
     organization := "com.augustnagro",
     name := "native-converter",
     version := "0.1.1-SNAPSHOT",
+    versionScheme := Some("early-semver"),
     
     scalaVersion := "3.0.0-RC1",
     scalacOptions ++= Seq(
