@@ -32,10 +32,8 @@ Then in `/build.sbt`, set the scala version and add the native-converter depende
 ```Scala
 scalaVersion := "3.0.0-RC1",
 
-// I couldn't get the %%% operator to work, maybe because Scala 3 is not released yet.
-// So for now, specify the Scala.js version postfix manually using %. Ie,
 libraryDependencies ++= Seq(
-  "com.augustnagro" % "native-converter_sjs1_3.0.0-RC1" % "0.2.0"
+  "com.augustnagro" %%% "native-converter" % "0.2.0"
 )
 
 // these features are optional
