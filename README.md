@@ -23,31 +23,29 @@ This library requires Scala 3 (Dotty), which is in release candidate. After [set
 
 In `/project/plugins.sbt` add the latest sbt-dotty and Scala.js plugin:
 ```Scala
-addSbtPlugin("ch.epfl.lamp" % "sbt-dotty" % "0.5.2")
-addSbtPlugin("org.scala-js" % "sbt-scalajs" % "1.4.0")
+addSbtPlugin("ch.epfl.lamp" % "sbt-dotty" % "0.5.3")
+addSbtPlugin("org.scala-js" % "sbt-scalajs" % "1.5.0")
 ```
 
 Then in `/build.sbt`, set the scala version and add the native-converter dependency:
 
 ```Scala
-scalaVersion := "3.0.0-M3",
+scalaVersion := "3.0.0-RC1",
 
 // I couldn't get the %%% operator to work, maybe because Scala 3 is not released yet.
 // So for now, specify the Scala.js version postfix manually using %. Ie,
 libraryDependencies ++= Seq(
-  "com.augustnagro" % "native-converter_sjs1_3.0.0-M3" % "0.1.0"
+  "com.augustnagro" % "native-converter_sjs1_3.0.0-RC1" % "0.2.0"
 )
 
 // these features are optional
 // but are nice and will probably be in Scala 3
 scalacOptions ++= Seq(
-  // https://dotty.epfl.ch/docs/reference/other-new-features/explicit-nulls.html
-  "-Yexplicit-nulls",
   // https://dotty.epfl.ch/docs/reference/other-new-features/indentation.html#variant-indentation-marker-
   "-Yindent-colons",
   // https://dotty.epfl.ch/docs/reference/other-new-features/safe-initialization.html
   "-Ycheck-init",
-),
+)
 ```
 
 ## Documentation
@@ -81,7 +79,7 @@ trait NativeConverter[T]:
 
 A Typeclass lets you add behavior without inheritance. Instead of extending a class or implementing an interface, you create a Typeclass instance that operates on that type, and pass it around. Typeclasses let you add features to types you don't control, aka [Retroactive Polymorphism](https://august.nagro.us/retroactive-polymorphism-scala.html).
 
-In Java, defining, creating, and passing Typeclass instances around would be inconvenient, so people `extend` instead. But Scala 3 makes it easy. When you write `case class User(..) derives NativeConverter`, the scala compiler calls method `NativeConverter::derived`, which generates a `given` instance in User's companion object. When you summon a NativeConverter for User, either with `summon[NativeConverter[User]]` or just `NativeConverter[User]` via the 0-arg `apply` helper method in `NativeConverter`, the same instance is returned.
+In Java, defining, creating, and passing Typeclass instances around would be inconvenient, so people use slow reflection instead. But Scala 3 makes it easy. When you write `case class User(..) derives NativeConverter`, the scala compiler calls method `NativeConverter::derived`, which generates a `given` instance in User's companion object. When you summon a NativeConverter for User, either with `summon[NativeConverter[User]]` or just `NativeConverter[User]` via the 0-arg `apply` helper method in `NativeConverter`, the same instance is returned.
 
 You can summon built-in NativeConverters for all the primitive types:
 

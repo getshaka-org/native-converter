@@ -4,7 +4,7 @@ lazy val root = project
   .settings(
     organization := "com.augustnagro",
     name := "native-converter",
-    version := "0.2.0",
+    version := "0.2.1-SNAPSHOT",
     versionScheme := Some("early-semver"),
     
     scalaVersion := "3.0.0-RC1",
