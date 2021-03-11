@@ -9,7 +9,6 @@ lazy val root = project
     scalaVersion := "3.0.0-RC1",
     scalacOptions ++= Seq(
       "-Ycheck-init",
-      "-Yexplicit-nulls",
       "-Yindent-colons"
     ),
     
