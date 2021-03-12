@@ -4,7 +4,7 @@ lazy val root = project
   .settings(
     organization := "org.getshaka",
     name := "native-converter",
-    version := "0.2.1-SNAPSHOT",
+    version := "0.3.0",
     versionScheme := Some("early-semver"),
     
     scalaVersion := "3.0.0-RC1",
