@@ -2,7 +2,7 @@ lazy val root = project
   .in(file("."))
   .enablePlugins(ScalaJSPlugin, ScalaJSJUnitPlugin)
   .settings(
-    organization := "com.augustnagro",
+    organization := "org.getshaka",
     name := "native-converter",
     version := "0.2.1-SNAPSHOT",
     versionScheme := Some("early-semver"),
@@ -14,12 +14,12 @@ lazy val root = project
     ),
     
     // publishing settings
-    homepage := Some(url("https://github.com/AugustNagro/native-converter")),
+    homepage := Some(url("https://github.com/getshaka-org/native-converter")),
     licenses += ("Apache-2.0", url("https://opensource.org/licenses/Apache-2.0")),
     scmInfo := Some(ScmInfo(
-      url("https://github.com/AugustNagro/native-converter"),
-      "scm:git:git@github.com/AugustNagro/native-converter.git",
-      Some("scm:git:git@github.com/AugustNagro/native-converter.git")
+      url("https://github.com/getshaka-org/native-converter"),
+      "scm:git:git@github.com:getshaka-org/native-converter.git",
+      Some("scm:git:git@github.com:getshaka-org/native-converter.git")
     )),
     developers := List(
       Developer(

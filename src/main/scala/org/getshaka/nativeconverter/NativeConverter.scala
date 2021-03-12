@@ -1,4 +1,4 @@
-package com.augustnagro.nativeconverter
+package org.getshaka.nativeconverter
 
 import scala.collection.{Iterable, Map, Seq, Set}
 import scala.collection.mutable.{HashMap, HashSet, Buffer, ArrayBuffer}
@@ -233,6 +233,48 @@ object NativeConverter:
       
     def fromNative(nativeJs: js.Any): Option[A] =
       Option(nativeJs).map(nc.fromNative)
+      
+  /*
+  Converters for Literal Types.
+  
+  Not working with explicit nulls: https://github.com/lampepfl/dotty/issues/11645
+   */
+  type LiteralType = Double|Float|Long|Int|Short|Byte|Boolean|Char|String
+
+  inline given literalDoubleConv[T <: Double]: NativeConverter[T] =
+    NativeConverter[Double].asInstanceOf[NativeConverter[T]]
+
+  inline given literalFloatConv[T <: Float]: NativeConverter[T] =
+    NativeConverter[Float].asInstanceOf[NativeConverter[T]]
+
+  inline given literalLongConv[T <: Long]: NativeConverter[T] =
+    NativeConverter[Long].asInstanceOf[NativeConverter[T]]
+
+  inline given literalIntConv[T <: Int]: NativeConverter[T] =
+    NativeConverter[Int].asInstanceOf[NativeConverter[T]]
+
+  inline given literalShortConv[T <: Short]: NativeConverter[T] =
+    NativeConverter[Short].asInstanceOf[NativeConverter[T]]
+
+  inline given literalByteConv[T <: Byte]: NativeConverter[T] =
+    NativeConverter[Byte].asInstanceOf[NativeConverter[T]]
+
+  inline given literalBooleanConv[T <: Boolean]: NativeConverter[T] =
+    NativeConverter[Boolean].asInstanceOf[NativeConverter[T]]
+
+  inline given literalCharConv[T <: Char]: NativeConverter[T] =
+    NativeConverter[Char].asInstanceOf[NativeConverter[T]]
+  
+  inline given literalStringConv[T <: String]: NativeConverter[T] =
+    NativeConverter[String].asInstanceOf[NativeConverter[T]]
+
+  given literalSumConv[T <: LiteralType](using vo: ValueOf[T], nc: NativeConverter[T]): NativeConverter[T] with
+    extension (t: T) def toNative: js.Any = nc.toNative(t)
+
+    def fromNative(nativeJs: js.Any): T =
+      val a = nc.fromNative(nativeJs)
+      if vo.value == a then vo.value
+      else throw IllegalArgumentException(s"Can not convert since $a not equal to literal ${vo.value}")
 
   /*
   NOW, LETS PROGRAM AT THE TYPE-LEVEL

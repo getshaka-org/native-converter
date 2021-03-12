@@ -1,4 +1,4 @@
-package com.augustnagro.nativeconverter
+package org.getshaka.nativeconverter
 
 /**
  * Sorry purists, I made a mutable Product. It's faster.

@@ -1,4 +1,4 @@
-import com.augustnagro.nativeconverter.{EsConverters, NativeConverter}
+import org.getshaka.nativeconverter.{EsConverters, NativeConverter}
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.Test
 

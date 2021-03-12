@@ -1,4 +1,4 @@
-package com.augustnagro.nativeconverter
+package org.getshaka.nativeconverter
 
 import scala.scalajs.js
 import scala.collection.Map

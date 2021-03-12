@@ -1,4 +1,4 @@
-import com.augustnagro.nativeconverter.NativeConverter
+import org.getshaka.nativeconverter.NativeConverter
 import org.junit.Assert._
 import org.junit.Test
 
@@ -31,10 +31,10 @@ class JsonTests:
     assertEquals("""127""", JSON.stringify(127.byteValue.toNative))
     assertEquals(127.toByte, NativeConverter[Byte].fromNative(JSON.parse("127")))
 
-    assertEquals(Short.MaxValue.toString, JSON.stringify(Short.MaxValue.toNative))
+    assertEquals(Short.MaxValue.toString, JSON.stringify(NativeConverter[Short].toNative(Short.MaxValue)))
     assertEquals(123.shortValue, NativeConverter[Short].fromNative(JSON.parse("123")))
 
-    assertEquals("1", JSON.stringify(1.toNative))
+    assertEquals("1", JSON.stringify(NativeConverter[Int].toNative(1)))
     assertEquals(Integer.MIN_VALUE, NativeConverter[Int].fromNative(JSON.parse(Integer.MIN_VALUE.toString)))
     try
       NativeConverter[Short].fromNative(JSON.parse(Int.MaxValue.toString))
@@ -217,7 +217,49 @@ class JsonTests:
 
   end jsonCollectionTest
 
+  @Test
+  def literalTypeDerivations(): Unit =
+    assertEquals("1", JSON.stringify(NativeConverter[1].toNative(2 - 1)))
+    assertEquals(1, NativeConverter[1].fromNative(JSON.parse("1")))
+    try
+      NativeConverter[1].fromNative(JSON.parse("2"))
+      fail("should have thrown")
+    catch _ => ()
 
-// todo collections, Option
+      // not working, since no Mirror.Of[(Int | String)] provided..
+//    val nc: NativeConverter[Int|String] = NativeConverter.derived
+//    assertEquals(3, nc.fromNative(JSON.parse("3")))
+    
+    // not working, since there is (correctly) no ValueOf[3|"X"]
+    // and we can't make a less strict given because the above mirror
+    // is unavailable
+//    type ThreeOrX = 3 | "X"
+//    assertEquals(3, NativeConverter[ThreeOrX].fromNative(JSON.parse("3")))
+    
+    type Square = "X"|"O"|Null
+    case class Game1(square: Square) derives NativeConverter
+    assertEquals(""" {"square":"X"}  """.trim, JSON.stringify(Game1("X").toNative))
+    assertEquals(Game1("X"), NativeConverter[Game1].fromNative(JSON.parse(""" {"square":"X"}  """)))
+
+    case class Game2(squares: Seq["X"|"Y"]) derives NativeConverter
+    assertEquals(""" {"squares":["X"]}  """.trim, JSON.stringify(Game2(Seq("X")).toNative))
+    assertEquals(Game2(Seq("X")), NativeConverter[Game2].fromNative(JSON.parse(""" {"squares":["X"]}  """)))
+
+    type Squares = Seq["X"|"Y"]
+    case class Game3(squares: Squares) derives NativeConverter
+    assertEquals(""" {"squares":["X"]}  """.trim, JSON.stringify(Game3(Seq("X")).toNative))
+    assertEquals(Game3(Seq("X")), NativeConverter[Game3].fromNative(JSON.parse(""" {"squares":["X"]}  """)))
+
+    type Squares1 = Seq["X"|"Y"|Null]
+    case class Game4(squares: Squares1) derives NativeConverter
+    assertEquals(""" {"squares":["X"]}  """.trim, JSON.stringify(Game4(Seq("X")).toNative))
+    assertEquals(Game4(Seq("X")), NativeConverter[Game4].fromNative(JSON.parse(""" {"squares":["X"]}  """)))
+
+    type Squares2 = Seq[Square]
+    case class Game5(squares: Squares2) derives NativeConverter
+    assertEquals(""" {"squares":["X"]}  """.trim, JSON.stringify(Game5(Seq("X")).toNative))
+    assertEquals(Game5(Seq("X")), NativeConverter[Game5].fromNative(JSON.parse(""" {"squares":["X"]}  """)))
+
+  end literalTypeDerivations
 
     

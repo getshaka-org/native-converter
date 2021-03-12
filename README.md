@@ -2,7 +2,7 @@ A [Scala.js](https://www.scala-js.org/) project that makes it easy to convert to
 
 ```Scala
 import scala.scalajs.js.JSON
-import com.augustnagro.nativeconverter.NativeConverter
+import org.getshaka.nativeconverter.NativeConverter
 
 case class User(name: String, isAdmin: Boolean, age: Int) derives NativeConverter
 
@@ -15,8 +15,6 @@ val parsedUser = NativeConverter[User].fromNative(JSON.parse(json))
 ```
 
 The primary motivation is using case classes with the [JSON](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON) object, although any use-case is supported.
-
-[https://august.nagro.us/scalajs-native-converter.html](https://august.nagro.us/scalajs-native-converter.html)
 
 ## Installing
 This library requires Scala 3 (Dotty), which is in release candidate. After [setting up a Scala.js project with SBT](https://www.scala-js.org/doc/tutorial/basic/),
@@ -33,7 +31,7 @@ Then in `/build.sbt`, set the scala version and add the native-converter depende
 scalaVersion := "3.0.0-RC1",
 
 libraryDependencies ++= Seq(
-  "com.augustnagro" %%% "native-converter" % "0.2.0"
+  "org.getshaka" %%% "native-converter" % "0.3.0"
 )
 
 // these features are optional
@@ -77,7 +75,7 @@ trait NativeConverter[T]:
 
 A Typeclass lets you add behavior without inheritance. Instead of extending a class or implementing an interface, you create a Typeclass instance that operates on that type, and pass it around. Typeclasses let you add features to types you don't control, aka [Retroactive Polymorphism](https://august.nagro.us/retroactive-polymorphism-scala.html).
 
-In Java, defining, creating, and passing Typeclass instances around would be inconvenient, so people use slow reflection instead. But Scala 3 makes it easy. When you write `case class User(..) derives NativeConverter`, the scala compiler calls method `NativeConverter::derived`, which generates a `given` instance in User's companion object. When you summon a NativeConverter for User, either with `summon[NativeConverter[User]]` or just `NativeConverter[User]` via the 0-arg `apply` helper method in `NativeConverter`, the same instance is returned.
+In Java, defining, creating, and passing Typeclass instances around would be inconvenient, so people use slow reflection instead. But Scala 3 makes it easy. When you write `case class User(..) derives NativeConverter`, the scala compiler calls method `NativeConverter::derived`, which generates a `given` instance in User's companion object. When you summon a NativeConverter for User, either with `summon[NativeConverter[User]]` or just `NativeConverter[User]` via the 0-arg `apply` helper, the same instance is returned.
 
 You can summon built-in NativeConverters for all the primitive types:
 
@@ -165,7 +163,7 @@ val mapJson = JSON.stringify(NativeConverter[Map[String, Int]].toNative(map))
 Only String keys are supported, since JSON requires String keys. If you'd rather convert to an [ES 2016 Map](https://www.scala-js.org/api/scalajs-library/latest/scala/scalajs/js/Map.html), do the following:
 
 ```Scala
-import com.augustnagro.nativeconverter.EsConverters.given
+import org.getshaka.nativeconverter.EsConverters.given
 
 val map = HashMap(1 -> 2, 3 -> 4)
 
@@ -175,7 +173,7 @@ val nativeMap = NativeConverter[Map[Int, Int]].toNative(map)
 nativeMap.asInstanceOf[js.Dynamic].get(3)
 ```
 
-I haven't implemented converters for all the native types, but if you ask me or make a pull request for one that's missing I will merge it.
+Converters are not yet implemented for many native ES types, please file an issue or PR if we're missing one you'd like.
 
 Option is serialized with null if None, and the converted value if Some.
 ```Scala
@@ -237,16 +235,16 @@ object App:
     println(JSON.stringify(User("John", false, 21).toNative))
 ```
 
-I've made a sample cross-project you can clone: [https://github.com/AugustNagro/native-converter-crossproject](https://github.com/AugustNagro/native-converter-crossproject)
+Here is a sample cross-project you can clone: [https://github.com/AugustNagro/native-converter-crossproject](https://github.com/AugustNagro/native-converter-crossproject)
 
 But what about performance, surely making your own js.Object subclasses is faster?
 Nope, derived NativeDecoders are 2x faster, even for simple cases like `User("John Smith", true, 42)`:
 
 ![bench](native-converter-vs-js-object-bench.png)
 
-The generated JavaScript code is very clean. I was amazed how nice it is when looking at `sbt fastLinkJS` output. This is all possible because of Scala 3's [`inline`](https://dotty.epfl.ch/docs/reference/metaprogramming/inline.html) keyword, and powerful type-level programming capabilities. That's right.. no Macros used whatsoever! The `derives` keyword on type T causes the NativeConverter Typeclass to be auto-generated in T's companion object. Only once, and when first requested.
+The generated JavaScript code is very clean. This is all possible because of Scala 3's [`inline`](https://dotty.epfl.ch/docs/reference/metaprogramming/inline.html) keyword, and powerful type-level programming capabilities. That's right.. no Macros used whatsoever! The `derives` keyword on type T causes the NativeConverter Typeclass to be auto-generated in T's companion object. Only once, and when first requested.
 
-It is safe to say that I am very impressed with Scala 3. And a big thank you to Sébastien Doeraene and Tobias Schlatter, who are first-rate maintainers of Scala.js, as well as Jamie Thompson who gave me advice on the conversion of Sum types.
+It is safe to say that Scala 3 is very impressive. And a big thank you to Sébastien Doeraene and Tobias Schlatter, who are first-rate maintainers of Scala.js, as well as Jamie Thompson who provided advice on the conversion of Sum types.
 
 ## License
 https://www.apache.org/licenses/LICENSE-2.0

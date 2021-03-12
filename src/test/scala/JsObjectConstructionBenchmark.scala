@@ -1,4 +1,4 @@
-import com.augustnagro.nativeconverter.NativeConverter
+import org.getshaka.nativeconverter.NativeConverter
 
 import scala.scalajs.js
 import scala.scalajs.js.JSON
