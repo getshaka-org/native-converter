@@ -4,7 +4,7 @@ lazy val root = project
   .settings(
     organization := "org.getshaka",
     name := "native-converter",
-    version := "0.3.0",
+    version := "0.3.1-SNAPSHOT",
     versionScheme := Some("early-semver"),
     
     scalaVersion := "3.0.0-RC1",
@@ -33,7 +33,7 @@ lazy val root = project
     publishArtifact.in(Test) := false,
     pomIncludeRepository := { _ => false },
     publishTo := {
-      val nexus = "https://oss.sonatype.org/"
+      val nexus = "https://s01.oss.sonatype.org/"
       if (isSnapshot.value)
         Some("snapshots" at nexus + "content/repositories/snapshots")
       else
