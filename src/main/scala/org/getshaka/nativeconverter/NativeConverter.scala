@@ -137,6 +137,120 @@ object NativeConverter:
     def fromNative(nativeJs: js.Any): Function3[A, B, C, D] =
       js.Any.toFunction3(nativeJs.asInstanceOf[js.Function3[A, B, C, D]])
       
+  given [A, B, C, D, E]: NativeConverter[Function4[A, B, C, D, E]] with
+    extension (t: Function4[A, B, C, D, E]) def toNative: js.Any =
+      js.Any.fromFunction4(t)
+    def fromNative(nativeJs: js.Any): Function4[A, B, C, D, E] =
+      js.Any.toFunction4(nativeJs.asInstanceOf[js.Function4[A, B, C, D, E]])
+
+  given [A, B, C, D, E, F]: NativeConverter[Function5[A, B, C, D, E, F]] with
+    extension (t: Function5[A, B, C, D, E, F]) def toNative: js.Any =
+      js.Any.fromFunction5(t)
+    def fromNative(nativeJs: js.Any): Function5[A, B, C, D, E, F] =
+      js.Any.toFunction5(nativeJs.asInstanceOf[js.Function5[A, B, C, D, E, F]])
+      
+  given [A, B, C, D, E, F, G]: NativeConverter[Function6[A, B, C, D, E, F, G]] with
+    extension (t: Function6[A, B, C, D, E, F, G]) def toNative: js.Any =
+      js.Any.fromFunction6(t)
+    def fromNative(nativeJs: js.Any): Function6[A, B, C, D, E, F, G] =
+      js.Any.toFunction6(nativeJs.asInstanceOf[js.Function6[A, B, C, D, E, F, G]])
+      
+  given [A, B, C, D, E, F, G, H]: NativeConverter[Function7[A, B, C, D, E, F, G, H]] with
+    extension (t: Function7[A, B, C, D, E, F, G, H]) def toNative: js.Any =
+      js.Any.fromFunction7(t)
+    def fromNative(nativeJs: js.Any): Function7[A, B, C, D, E, F, G, H] =
+      js.Any.toFunction7(nativeJs.asInstanceOf[js.Function7[A, B, C, D, E, F, G, H]])
+      
+  given [A, B, C, D, E, F, G, H, I]: NativeConverter[Function8[A, B, C, D, E, F, G, H, I]] with
+    extension (t: Function8[A, B, C, D, E, F, G, H, I]) def toNative: js.Any =
+      js.Any.fromFunction8(t)
+    def fromNative(nativeJs: js.Any): Function8[A, B, C, D, E, F, G, H, I] =
+      js.Any.toFunction8(nativeJs.asInstanceOf[js.Function8[A, B, C, D, E, F, G, H, I]])
+      
+  given [A, B, C, D, E, F, G, H, I, J]: NativeConverter[Function9[A, B, C, D, E, F, G, H, I, J]] with
+    extension (t: Function9[A, B, C, D, E, F, G, H, I, J]) def toNative: js.Any =
+      js.Any.fromFunction9(t)
+    def fromNative(nativeJs: js.Any): Function9[A, B, C, D, E, F, G, H, I, J] =
+      js.Any.toFunction9(nativeJs.asInstanceOf[js.Function9[A, B, C, D, E, F, G, H, I, J]])
+      
+  given [A, B, C, D, E, F, G, H, I, J, K]: NativeConverter[Function10[A, B, C, D, E, F, G, H, I, J, K]] with
+    extension (t: Function10[A, B, C, D, E, F, G, H, I, J, K]) def toNative: js.Any =
+      js.Any.fromFunction10(t)
+    def fromNative(nativeJs: js.Any): Function10[A, B, C, D, E, F, G, H, I, J, K] =
+      js.Any.toFunction10(nativeJs.asInstanceOf[js.Function10[A, B, C, D, E, F, G, H, I, J, K]])
+      
+  given [A, B, C, D, E, F, G, H, I, J, K, L]: NativeConverter[Function11[A, B, C, D, E, F, G, H, I, J, K, L]] with
+    extension (t: Function11[A, B, C, D, E, F, G, H, I, J, K, L]) def toNative: js.Any =
+      js.Any.fromFunction11(t)
+    def fromNative(nativeJs: js.Any): Function11[A, B, C, D, E, F, G, H, I, J, K, L] =
+      js.Any.toFunction11(nativeJs.asInstanceOf[js.Function11[A, B, C, D, E, F, G, H, I, J, K, L]])
+
+  given [A, B, C, D, E, F, G, H, I, J, K, L, M]: NativeConverter[Function12[A, B, C, D, E, F, G, H, I, J, K, L, M]] with
+    extension (t: Function12[A, B, C, D, E, F, G, H, I, J, K, L, M]) def toNative: js.Any =
+      js.Any.fromFunction12(t)
+    def fromNative(nativeJs: js.Any): Function12[A, B, C, D, E, F, G, H, I, J, K, L, M] =
+      js.Any.toFunction12(nativeJs.asInstanceOf[js.Function12[A, B, C, D, E, F, G, H, I, J, K, L, M]])
+    
+  given [A, B, C, D, E, F, G, H, I, J, K, L, M, N]: NativeConverter[Function13[A, B, C, D, E, F, G, H, I, J, K, L, M, N]] with
+    extension (t: Function13[A, B, C, D, E, F, G, H, I, J, K, L, M, N]) def toNative: js.Any =
+      js.Any.fromFunction13(t)
+    def fromNative(nativeJs: js.Any): Function13[A, B, C, D, E, F, G, H, I, J, K, L, M, N] =
+      js.Any.toFunction13(nativeJs.asInstanceOf[js.Function13[A, B, C, D, E, F, G, H, I, J, K, L, M, N]])
+    
+  given [A, B, C, D, E, F, G, H, I, J, K, L, M, N, O]: NativeConverter[Function14[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O]] with
+    extension (t: Function14[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O]) def toNative: js.Any =
+      js.Any.fromFunction14(t)
+    def fromNative(nativeJs: js.Any): Function14[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O] =
+      js.Any.toFunction14(nativeJs.asInstanceOf[js.Function14[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O]])
+  
+  given [A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P]: NativeConverter[Function15[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P]] with
+    extension (t: Function15[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P]) def toNative: js.Any =
+      js.Any.fromFunction15(t)
+    def fromNative(nativeJs: js.Any): Function15[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P] =
+      js.Any.toFunction15(nativeJs.asInstanceOf[js.Function15[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P]])
+      
+  given [A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q]: NativeConverter[Function16[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q]] with
+    extension (t: Function16[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q]) def toNative: js.Any =
+      js.Any.fromFunction16(t)
+    def fromNative(nativeJs: js.Any): Function16[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q] =
+      js.Any.toFunction16(nativeJs.asInstanceOf[js.Function16[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q]])
+    
+  given [A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R]: NativeConverter[Function17[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R]] with
+    extension (t: Function17[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R]) def toNative: js.Any =
+      js.Any.fromFunction17(t)
+    def fromNative(nativeJs: js.Any): Function17[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R] =
+      js.Any.toFunction17(nativeJs.asInstanceOf[js.Function17[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R]])
+    
+  given [A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S]: NativeConverter[Function18[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S]] with
+    extension (t: Function18[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S]) def toNative: js.Any =
+      js.Any.fromFunction18(t)
+    def fromNative(nativeJs: js.Any): Function18[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S] =
+      js.Any.toFunction18(nativeJs.asInstanceOf[js.Function18[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S]])
+
+  given [A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T]: NativeConverter[Function19[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T]] with
+    extension (t: Function19[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T]) def toNative: js.Any =
+      js.Any.fromFunction19(t)
+    def fromNative(nativeJs: js.Any): Function19[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T] =
+      js.Any.toFunction19(nativeJs.asInstanceOf[js.Function19[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T]])
+
+    given [A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U]: NativeConverter[Function20[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U]] with
+      extension (t: Function20[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U]) def toNative: js.Any =
+        js.Any.fromFunction20(t)
+      def fromNative(nativeJs: js.Any): Function20[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U] =
+        js.Any.toFunction20(nativeJs.asInstanceOf[js.Function20[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U]])
+  
+  given [A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V]: NativeConverter[Function21[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V]] with
+    extension (t: Function21[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V]) def toNative: js.Any =
+      js.Any.fromFunction21(t)
+    def fromNative(nativeJs: js.Any): Function21[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V] =
+      js.Any.toFunction21(nativeJs.asInstanceOf[js.Function21[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V]])
+
+  given [A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W]: NativeConverter[Function22[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W]] with
+    extension (t: Function22[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W]) def toNative: js.Any =
+      js.Any.fromFunction22(t)
+    def fromNative(nativeJs: js.Any): Function22[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W] =
+      js.Any.toFunction22(nativeJs.asInstanceOf[js.Function22[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W]])
+  
   /*
   Collection types. Arrays, Iterables, Seqs, Sets, Lists, and Buffers
   are serialized using JavaScript Arrays. Maps become JS objects, although only
