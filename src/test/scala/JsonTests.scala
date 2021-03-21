@@ -218,7 +218,7 @@ class JsonTests:
   end jsonCollectionTest
 
   @Test
-  def literalTypeDerivations(): Unit =
+  def literalTypeDerivations: Unit =
     assertEquals("1", JSON.stringify(NativeConverter[1].toNative(2 - 1)))
     assertEquals(1, NativeConverter[1].fromNative(JSON.parse("1")))
     try
