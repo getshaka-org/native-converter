@@ -114,12 +114,12 @@ class JsonTests:
     assertEquals(c, NativeConverter[C].fromNative(JSON.parse(strC)))
     
     case class SingletonCaseClass() derives NativeConverter
-    assertEquals(""" "SingletonCaseClass" """.trim, JSON.stringify(SingletonCaseClass().toNative))
+    assertEquals(""" {} """.trim, JSON.stringify(SingletonCaseClass().toNative))
     assertEquals(SingletonCaseClass(),
-      NativeConverter[SingletonCaseClass].fromNative(JSON.parse(""" "SingletonCaseClass" """)))
+      NativeConverter[SingletonCaseClass].fromNative(JSON.parse(""" {} """)))
     
-    assertEquals(""" "CaseObject" """.trim, JSON.stringify(CaseObject.toNative))
-    assertEquals(CaseObject, NativeConverter[CaseObject.type].fromNative(JSON.parse(""" "CaseObject" """)))
+    assertEquals(""" {} """.trim, JSON.stringify(CaseObject.toNative))
+    assertEquals(CaseObject, NativeConverter[CaseObject.type].fromNative(JSON.parse(""" {} """)))
     
   end jsonSimpleCaseClassTest
   
@@ -147,22 +147,26 @@ class JsonTests:
     assertEquals(""" "Blue" """.trim, JSON.stringify(Color.Blue.toNative))
     assertEquals(0x00FF00, NativeConverter[Color].fromNative(JSON.parse(""" "Green" """)).rgb)
     
-    assertEquals(""" "Nn" """.trim, JSON.stringify(Opt.Nn.toNative))
-    assertEquals(Opt.Nn, NativeConverter[Opt[Long]].fromNative(JSON.parse(""" "Nn" """)))
+    assertEquals(""" {"@type":"Nn"} """.trim, JSON.stringify(Opt.Nn.toNative))
+    try
+      assertEquals(Opt.Nn, NativeConverter[Opt[Long]].fromNative(JSON.parse(""" "Nn" """)))
+      fail("@type should be required")
+    catch _ => ()
+    assertEquals(Opt.Nn, NativeConverter[Opt[Long]].fromNative(JSON.parse(""" {"@type":"Nn"} """)))
     
-    assertEquals(""" {"x":123} """.trim, JSON.stringify(Opt.Sm(123).toNative))
+    assertEquals(""" {"x":123,"@type":"Sm"} """.trim, JSON.stringify(Opt.Sm(123).toNative))
     assertEquals(Opt.Sm(Long.MaxValue),
-      NativeConverter[Opt[Long]].fromNative(JSON.parse(s""" {"x": "${Long.MaxValue}"} """)))
+      NativeConverter[Opt[Long]].fromNative(JSON.parse(s""" {"x": "${Long.MaxValue}", "@type":"Sm"} """)))
     
     try
       NativeConverter[Opt[Int]].fromNative(JSON.parse("1.1"))
       fail("should not be able to make Opt[Int] given a Double")
     catch case _ => ()
   
-    assertEquals(""" "N" """.trim, JSON.stringify(N.toNative))
-    assertEquals(N, NativeConverter[O[String]].fromNative(""" "N" """))
-    assertEquals(""" {"x":"123"} """.trim, JSON.stringify(S(123L).toNative))
-    assertEquals(S(123L), NativeConverter[O[Long]].fromNative(JSON.parse(""" {"x":"123"} """)))
+    assertEquals(""" {"@type":"N"} """.trim, JSON.stringify(N.toNative))
+    assertEquals(N, NativeConverter[O[String]].fromNative(JSON.parse(""" {"@type":"N"} """)))
+    assertEquals(""" {"x":"123","@type":"S"} """.trim, JSON.stringify(S(123L).toNative))
+    assertEquals(S(123L), NativeConverter[O[Long]].fromNative(JSON.parse(""" {"x":"123","@type":"S"} """)))
 
   @Test
   def jsonCollectionTest: Unit =
