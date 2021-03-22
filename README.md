@@ -31,7 +31,7 @@ Then in `/build.sbt`, set the scala version and add the native-converter depende
 scalaVersion := "3.0.0-RC1",
 
 libraryDependencies ++= Seq(
-  "org.getshaka" %%% "native-converter" % "0.3.0"
+  "org.getshaka" %%% "native-converter" % "0.4.0"
 )
 
 // these features are optional
