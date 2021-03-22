@@ -73,7 +73,7 @@ trait NativeConverter[T]:
   def fromNative(nativeJs: js.Any): T
 ```
 
-A Typeclass lets you add behavior without inheritance. Instead of extending a class or implementing an interface, you create a Typeclass instance that operates on that type, and pass it around. Typeclasses let you add features to types you don't control, aka [Retroactive Polymorphism](https://august.nagro.us/retroactive-polymorphism-scala.html).
+A Typeclass is just a generic class whose instances operate on some type. Typeclasses let you add features to types you don't control, aka [Retroactive Polymorphism](https://august.nagro.us/retroactive-polymorphism-scala.html).
 
 In Java, defining, creating, and passing Typeclass instances around would be inconvenient, so people use slow reflection instead. But Scala 3 makes it easy. When you write `case class User(..) derives NativeConverter`, the scala compiler calls method `NativeConverter::derived`, which generates a `given` instance in User's companion object. When you summon a NativeConverter for User, either with `summon[NativeConverter[User]]` or just `NativeConverter[User]` via the 0-arg `apply` helper, the same instance is returned.
 
@@ -187,7 +187,9 @@ val someJson = JSON.stringify(nc.toNative(some))
 val none = nc.fromNative(JSON.parse("null"))
 ```
 
-Any [Product](https://www.scala-lang.org/api/current/scala/Product.html) or Sum type (like case classes and enums) can derive a NativeConverter. If the Product is a Singleton (ie, having no parameters) then the type name or [productPrefix](https://www.scala-lang.org/api/current/scala/Product.html#productPrefix:String) is used. Otherwise, an object is created using the parameter names as keys.
+Any [Product](https://www.scala-lang.org/api/current/scala/Product.html) or Sum type can derive a NativeConverter. Product types are serialized into objects with the parameter names as keys. Simple Sum types (ie, non-parameterized [enums](https://dotty.epfl.ch/docs/reference/enums/enums.html) and sealed hierarchies) are serialized using their (short) type name. Other Sum types are serialized and deserialized using a `@type` property that equals the (short) type name.
+
+This behavior closely matches [Jackson](https://github.com/FasterXML/jackson) and other popular libraries, in order to maximize compatibility.
 
 You can for example redefine Option as a Scala 3 enum:
 
@@ -196,11 +198,11 @@ enum Opt[+T] derives NativeConverter:
   case Sm(x: T)
   case Nn
 
-// """ "Nn" """.trim
+// """ {"@type":"Nn"} """.trim
 val nnJson = JSON.stringify(Opt.Nn.toNative)
 
 // Opt.Sm(123L)
-val sm = NativeConverter[Opt[Long]].fromNative(JSON.parse(""" {"x":123} """))
+val sm = NativeConverter[Opt[Long]].fromNative(JSON.parse(""" {"x":123,"@type":"Sm"} """))
 ```
 
 And of course, you can nest to any depth you wish:

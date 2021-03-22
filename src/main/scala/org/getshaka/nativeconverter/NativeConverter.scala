@@ -402,6 +402,7 @@ object NativeConverter:
   case class Test[T](t: T). Then, every summon of NativeConverter[Test[Int]]
   would expect to receive a new instance, as specified here:
   https://dotty.epfl.ch/docs/reference/contextual/givens.html#given-instance-initialization
+  Our derived NativeConverters are stateless in any case.
    */
 
   /**
@@ -427,7 +428,8 @@ object NativeConverter:
    * If every element of the Sum type is a Singleton, then
    * serialize using the type name. Otherwise, it is an ADT
    * that is serialized the normal way, by summoning NativeConverters
-   * for the elements.
+   * for the elements and adding a `@type` property providing the
+   * (short) class name.
    */
   private inline def sumConverter[T, Mets <: Tuple](m: Mirror.SumOf[T]): NativeConverter[T] =
     inline erasedValue[Mets] match
@@ -480,48 +482,53 @@ object NativeConverter:
         if constString[mel] == name then
           summonInline[Mirror.ProductOf[met & T]].fromProduct(EmptyTuple)
         else simpleSumFromNative[T, Label, metsTail, melsTail](name)
-    
+
+  /**
+   * Uses a `@type` property that holds the (short) class name. todo: make configurable
+   */
   private inline def buildAdtSumConverter[T](m: Mirror.SumOf[T]): NativeConverter[T] =
     new NativeConverter[T]:
       extension (t: T) def toNative: js.Any =
-        adtSumToNative[T, m.MirroredElemTypes](t, m.ordinal(t))
-      
+        adtSumToNative[T, m.MirroredElemTypes, m.MirroredElemLabels](t, m.ordinal(t))
+
       def fromNative(nativeJs: js.Any): T =
-        adtSumFromNative[T, m.MirroredLabel, m.MirroredElemTypes](nativeJs)
+        if !nativeJs.asInstanceOf[js.Object].hasOwnProperty("@type") then
+          throw IllegalArgumentException("Missing required @type property: " + JSON.stringify(nativeJs))
+        val typeName = nativeJs.asInstanceOf[js.Dynamic].`@type`.asInstanceOf[String]
+        adtSumFromNative[T, m.MirroredLabel, m.MirroredElemTypes, m.MirroredElemLabels](typeName, nativeJs)
 
   /**
    * If the Sum type has any element that is not Singleton, we summon the NativeConverters
    * for the elements we want to convert.
    */
-  private inline def adtSumToNative[T, Mets <: Tuple](t: T, ordinal: Int, i: Int = 0): js.Any =
-    inline erasedValue[Mets] match
-      case _: EmptyTuple => // can never reach
-      case _: (met *: metsTail) =>
+  private inline def adtSumToNative[T, Mets <: Tuple, Mels <: Tuple](t: T, ordinal: Int, i: Int = 0): js.Any =
+    inline (erasedValue[Mets], erasedValue[Mels]) match
+      case _: (EmptyTuple, EmptyTuple) => // can never reach
+      case _: ((met *: metsTail), (mel *: melsTail)) =>
         if i == ordinal then
-          summonInline[NativeConverter[met]].asInstanceOf[NativeConverter[T]].toNative(t)
-        else adtSumToNative[T, metsTail](t, ordinal, i + 1)
-        
-  private inline def adtSumFromNative[T, Label, Mets <: Tuple](nativeJs: js.Any): T =
-    inline erasedValue[Mets] match
-      case _: EmptyTuple => throw IllegalArgumentException(
-        "Cannot decode " + constString[Label] + " with " + JSON.stringify(nativeJs))
-      case _: (met *: metsTail) =>
-        try summonInline[NativeConverter[met]].asInstanceOf[NativeConverter[T]].fromNative(nativeJs)
-        catch _ => adtSumFromNative[T, Label, metsTail](nativeJs)
+          val res = summonInline[NativeConverter[met]].asInstanceOf[NativeConverter[T]].toNative(t)
+          res.asInstanceOf[js.Dynamic].`@type` = constString[mel]
+          res
+        else adtSumToNative[T, metsTail, melsTail](t, ordinal, i + 1)
 
+  private inline def adtSumFromNative[T, Label, Mets <: Tuple, Mels <: Tuple](
+    typeName: String,
+    nativeJs: js.Any
+  ): T =
+    inline (erasedValue[Mets], erasedValue[Mels]) match
+      case _: (EmptyTuple, EmptyTuple) => throw IllegalArgumentException(
+        "Cannot decode " + constString[Label] + " with " + JSON.stringify(nativeJs))
+      case _: ((met *: metsTail), (mel *: melsTail)) =>
+        if constString[mel] == typeName then
+          summonInline[NativeConverter[met]].asInstanceOf[NativeConverter[T]].fromNative(nativeJs)
+        else
+          adtSumFromNative[T, Label, metsTail, melsTail](typeName, nativeJs)
 
   /**
-   * When deserializing a Product, first we check if it is a Singleton. If yes, return the
-   * String productPrefix. If no, then create a JS Object with element names as keys, and
-   * summon NativeConverters for every element to call toNative() on that element.
-   * <br>
-   * The reason we use productPrefix instead of constString[TypeLabel] (like in the simple Sum
-   * case) is because of case objects. If you have `case object None`, the type name becomes `None$`,
-   * which is not very helpful.
+   * Makes a JS Object with a property for every Scala field.
    */
   private inline def productToNative[T](m: Mirror.ProductOf[T], p: Product): js.Any =
-    inline if isSingleton[T] then p.productPrefix
-    else buildProductToNative[m.MirroredElemTypes, m.MirroredElemLabels](p)
+    buildProductToNative[m.MirroredElemTypes, m.MirroredElemLabels](p)
   
   private inline def buildProductToNative[Mets <: Tuple, Mels <: Tuple](
     p: Product,
@@ -542,11 +549,12 @@ object NativeConverter:
         val converter = summonInline[NativeConverter[met]]
         res.updateDynamic(constString[mel])(converter.toNative(p.productElement(i).asInstanceOf[met]))
         buildProductToNative[metsTail, melsTail](p, i + 1, res)
-        
-  // use the EmptyTuple if singleton, otherwise construct
+
+  /**
+   * Builds a Scala product of type T from the JS Object properties.
+   */
   private inline def nativeToProduct[T](m: Mirror.ProductOf[T], nativeJs: js.Any): T =
-    inline if isSingleton[T] then m.fromProduct(EmptyTuple)
-    else buildNativeProduct[T, m.MirroredElemTypes, m.MirroredElemLabels](
+    buildNativeProduct[T, m.MirroredElemTypes, m.MirroredElemLabels](
       m, nativeJs.asInstanceOf[js.Dynamic], ArrayProduct(sizeOf[m.MirroredElemTypes]))
   
   private inline def buildNativeProduct[T, Mets <: Tuple, Mels <: Tuple](
