@@ -21,26 +21,19 @@ This library requires Scala 3 (Dotty), which is in release candidate. After [set
 
 In `/project/plugins.sbt` add the latest sbt-dotty and Scala.js plugin:
 ```Scala
+addSbtPlugin("org.scala-js" % "sbt-scalajs" % "1.5.1")
+
+// Not required with SBT Version >= 1.5.0
 addSbtPlugin("ch.epfl.lamp" % "sbt-dotty" % "0.5.3")
-addSbtPlugin("org.scala-js" % "sbt-scalajs" % "1.5.0")
 ```
 
 Then in `/build.sbt`, set the scala version and add the native-converter dependency:
 
 ```Scala
-scalaVersion := "3.0.0-RC1",
+scalaVersion := "3.0.0-RC3",
 
 libraryDependencies ++= Seq(
-  "org.getshaka" %%% "native-converter" % "0.4.0"
-)
-
-// these features are optional
-// but are nice and will probably be in Scala 3
-scalacOptions ++= Seq(
-  // https://dotty.epfl.ch/docs/reference/other-new-features/indentation.html#variant-indentation-marker-
-  "-Yindent-colons",
-  // https://dotty.epfl.ch/docs/reference/other-new-features/safe-initialization.html
-  "-Ycheck-init",
+  "org.getshaka" %%% "native-converter" % "0.4.1"
 )
 ```
 
@@ -213,7 +206,7 @@ case class X(a: List[String])
 case class Y(b: Option[X]) derives NativeConverter
 
 val y = Y(Some(X(List())))
-val yStr = """ {"b":{"a":[]}} """.trim.nn
+val yStr = """ {"b":{"a":[]}} """.trim
 
 assertEquals(yStr, JSON.stringify(y.toNative))
 

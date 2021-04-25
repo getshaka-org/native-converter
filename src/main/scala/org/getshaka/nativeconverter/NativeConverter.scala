@@ -443,12 +443,13 @@ object NativeConverter:
   /**
    * A singleton is a Product with no parameter elements
    */
-  private inline def isSingleton[T]: Boolean = summonFrom[T]:
+  private inline def isSingleton[T]: Boolean = summonFrom[T] {
     case product: Mirror.ProductOf[T] =>
       inline erasedValue[product.MirroredElemTypes] match
         case _: EmptyTuple => true
         case _ => false
     case _ => false
+  }
 
   private inline def simpleSumConverter[T](m: Mirror.SumOf[T]): NativeConverter[T] =
     new NativeConverter[T]:

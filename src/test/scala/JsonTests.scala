@@ -67,7 +67,7 @@ class JsonTests:
         try nativeJs.asInstanceOf[Int]
         catch case _ => nativeJs.asInstanceOf[String].toLong
         
-    val bigLongStr = s""" "${Long.MaxValue}" """.trim.nn
+    val bigLongStr = s""" "${Long.MaxValue}" """.trim
     assertEquals(Long.MaxValue, NativeConverter[Long].fromNative(JSON.parse(bigLongStr)))
     assertEquals(bigLongStr, JSON.stringify(NativeConverter[Long].toNative(Long.MaxValue)))
     
@@ -215,7 +215,7 @@ class JsonTests:
     case class X(a: List[String])
     case class Y(b: Option[X]) derives NativeConverter
     val y = Y(Some(X(List())))
-    val yStr = """ {"b":{"a":[]}} """.trim.nn
+    val yStr = """ {"b":{"a":[]}} """.trim
     assertEquals(yStr, JSON.stringify(y.toNative))
     assertEquals(y, NativeConverter[Y].fromNative(JSON.parse(yStr)))
 

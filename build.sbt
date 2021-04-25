@@ -7,12 +7,10 @@ lazy val root = project
     version := "0.4.1-SNAPSHOT",
     versionScheme := Some("early-semver"),
     
-    scalaVersion := "3.0.0-RC1",
-    scalacOptions ++= Seq(
-      "-Ycheck-init",
-      "-Yindent-colons"
-    ),
-    
+    scalaVersion := "3.0.0-RC3",
+    // todo remove when fixed: https://github.com/lampepfl/dotty/issues/11943
+    Compile / doc / sources := Seq(),
+
     // publishing settings
     homepage := Some(url("https://github.com/getshaka-org/native-converter")),
     licenses += ("Apache-2.0", url("https://opensource.org/licenses/Apache-2.0")),
@@ -30,7 +28,7 @@ lazy val root = project
       )
     ),
     publishMavenStyle := true,
-    publishArtifact.in(Test) := false,
+    Test / publishArtifact := false,
     pomIncludeRepository := { _ => false },
     publishTo := {
       val nexus = "https://s01.oss.sonatype.org/"
