@@ -1,9 +1,10 @@
 import org.getshaka.nativeconverter.NativeConverter
-import org.junit.Assert._
+import org.junit.Assert.*
 import org.junit.Test
 
 import scala.collection.mutable.ListBuffer
 import scala.collection.{Iterable, Map, Seq, Set, mutable}
+import scala.collection.immutable
 import scala.scalajs.js
 import scala.scalajs.js.JSON
 
@@ -189,6 +190,10 @@ class JsonTests:
 //    assertEquals(strArr, JSON.stringify(c.toNative))
     assertTrue(c sameElements NativeConverter[Seq[Int]].fromNative(nativeArr))
 
+    val ci = immutable.Seq(1,2,3)
+    assertEquals(strArr, JSON.stringify(NativeConverter[immutable.Seq[Int]].toNative(ci)))
+    assertTrue(ci sameElements NativeConverter[immutable.Seq[Int]].fromNative(nativeArr))
+
     val e = List(1,2,3)
     assertEquals(strArr, JSON.stringify(NativeConverter[List[Int]].toNative(e)))
     assertTrue(e sameElements NativeConverter[List[Int]].fromNative(nativeArr))
@@ -196,6 +201,15 @@ class JsonTests:
     val f = ListBuffer(1,2,3)
     assertEquals(strArr, JSON.stringify(NativeConverter[mutable.Buffer[Int]].toNative(f)))
     assertTrue(f sameElements NativeConverter[mutable.Buffer[Int]].fromNative(nativeArr))
+
+    val g = immutable.Map[String, Int]("a" -> 1, "b" -> 2, "c" -> 3)
+    val strMap = """ {"a":1,"b":2,"c":3} """.trim
+    assertEquals(strMap, JSON.stringify(NativeConverter[immutable.Map[String, Int]].toNative(g)))
+    assertEquals(g, NativeConverter[immutable.Map[String, Int]].fromNative(JSON.parse(strMap)))
+
+    val h = immutable.Set[Int](1,2,3)
+    assertEquals(strArr, JSON.stringify(NativeConverter[immutable.Set[Int]].toNative(h)))
+    assertEquals(h, NativeConverter[immutable.Set[Int]].fromNative(JSON.parse(strArr)))
 
     val composite = Array(Map("a" -> Set(1, 2, 3), "b" -> Set(4, 5, 6)))
     assertEquals(""" [{"a":[1,2,3],"b":[4,5,6]}]  """.trim, JSON.stringify(composite.toNative))

@@ -3,6 +3,7 @@ package org.getshaka.nativeconverter
 import scala.collection.{Iterable, Map, Seq, Set}
 import scala.collection.mutable.{HashMap, HashSet, Buffer, ArrayBuffer}
 import scala.collection.immutable.List
+import scala.collection.immutable
 import scala.deriving.Mirror
 import scala.compiletime.{constValue, constValueTuple, erasedValue, error, summonFrom, summonInline}
 import scala.reflect.ClassTag
@@ -347,7 +348,35 @@ object NativeConverter:
       
     def fromNative(nativeJs: js.Any): Option[A] =
       Option(nativeJs).map(nc.fromNative)
-      
+
+  given immutableSeqConv[A](using nc: NativeConverter[A]): NativeConverter[immutable.Seq[A]] with
+    extension (t: immutable.Seq[A]) def toNative: js.Any =
+      makeNativeArray(t, nc)
+
+    def fromNative(nativeJs: js.Any): immutable.Seq[A] =
+      nativeJs.asInstanceOf[js.Array[js.Any]].view.map(nc.fromNative).toSeq
+
+  given immutableMapConv[A](using nc: NativeConverter[A]): NativeConverter[immutable.Map[String, A]] with
+    extension (t: immutable.Map[String, A]) def toNative: js.Any =
+      val res = js.Object().asInstanceOf[js.Dynamic]
+      for (k, v) <- t do
+        res.updateDynamic(k)(nc.toNative(v))
+      res
+
+    def fromNative(nativeJs: js.Any): immutable.Map[String, A] =
+      val dict = nativeJs.asInstanceOf[js.Dictionary[js.Any]]
+      var res = immutable.HashMap[String, A]()
+      for (k, v) <- dict do
+        res = res.updated(k, nc.fromNative(v))
+      res
+
+  given immutableSetConv[A](using nc: NativeConverter[A]): NativeConverter[immutable.Set[A]] with
+    extension (t: immutable.Set[A]) def toNative: js.Any =
+      makeNativeArray(t, nc)
+
+    def fromNative(nativeJs: js.Any): immutable.Set[A] =
+      nativeJs.asInstanceOf[js.Array[js.Any]].view.map(nc.fromNative).toSet
+
   /*
   Converters for Literal Types.
   
