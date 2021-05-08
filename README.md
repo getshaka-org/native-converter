@@ -126,9 +126,6 @@ nativeFunc.asInstanceOf[js.Dynamic]("Ray")
 Arrays, Iterables, Seqs, Sets, Lists, and Buffers are serialized using JavaScript Arrays:
 
 ```Scala
-// default NativeConverters are only implemented
-// for the collections in scala.collection.*, not the deprecated
-// aliases in scala.Predef
 import scala.collection.{Seq, Set}
 
 val seq = Seq(1, 2, 3)
