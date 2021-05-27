@@ -10,7 +10,7 @@ import scala.scalajs.js.WrappedMap
  */
 object EsConverters:
   
-  given [K, V](using kConv: NativeConverter[K], vConv: NativeConverter[V]): NativeConverter[Map[K, V]] with
+  given esMapConv[K, V](using kConv: NativeConverter[K], vConv: NativeConverter[V]): NativeConverter[Map[K, V]] with
     extension (t: Map[K, V]) def toNative: js.Any =
       val res = js.Map[js.Any, js.Any]()
       for (k, v) <- t do

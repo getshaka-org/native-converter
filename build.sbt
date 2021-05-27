@@ -4,10 +4,10 @@ lazy val root = project
   .settings(
     organization := "org.getshaka",
     name := "native-converter",
-    version := "0.4.2-SNAPSHOT",
+    version := "0.5.0-SNAPSHOT",
     versionScheme := Some("early-semver"),
     
-    scalaVersion := "3.0.0-RC3",
+    scalaVersion := "3.0.0",
     // todo remove when fixed: https://github.com/lampepfl/dotty/issues/11943
     Compile / doc / sources := Seq(),
 

@@ -6,7 +6,7 @@ import scala.collection.Map
 import scala.scalajs.js
 
 class EsConverterTests:
-  import EsConverters.given
+  import EsConverters.esMapConv
   
   @Test
   def functionTest: Unit =
