@@ -7,9 +7,7 @@ lazy val root = project
     version := "0.5.1-SNAPSHOT",
     versionScheme := Some("early-semver"),
     
-    scalaVersion := "3.0.0",
-    // todo remove when fixed: https://github.com/lampepfl/dotty/issues/11943
-    Compile / doc / sources := Seq(),
+    scalaVersion := "3.0.1",
 
     // publishing settings
     homepage := Some(url("https://github.com/getshaka-org/native-converter")),
