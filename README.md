@@ -36,16 +36,16 @@ This library requires Scala 3. After [setting up a Scala.js project with SBT](ht
 
 In `/project/plugins.sbt` add the latest sbt-dotty and Scala.js plugin:
 ```Scala
-addSbtPlugin("org.scala-js" % "sbt-scalajs" % "1.5.1")
+addSbtPlugin("org.scala-js" % "sbt-scalajs" % "1.6.0")
 ```
 
 Then in `/build.sbt`, set the scala version and add the native-converter dependency:
 
 ```Scala
-scalaVersion := "3.0.0",
+scalaVersion := "3.0.1",
 
 libraryDependencies ++= Seq(
-  "org.getshaka" %%% "native-converter" % "0.5.0"
+  "org.getshaka" %%% "native-converter" % "0.5.1"
 )
 ```
 
