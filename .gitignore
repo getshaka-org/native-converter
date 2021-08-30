@@ -21,7 +21,29 @@ hs_err_pid*
 *.log
 
 .bsp
-
 *.sc
-
 *.ods
+
+
+# sbt specific
+.cache
+.history
+.lib/
+dist/*
+lib_managed/
+src_managed/
+project/boot/
+project/plugins/project/
+project/project/
+project/metals.sbt
+target/
+bin/
+
+
+.idea/
+
+.bloop/
+.metals/
+.vscode/
+
+null/
