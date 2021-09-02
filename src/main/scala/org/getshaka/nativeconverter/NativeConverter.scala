@@ -375,7 +375,7 @@ object NativeConverter:
       case p: Mirror.ProductOf[A] => productConverter(p)
 
   private inline def summonElementConverters[A](m: Mirror.Of[A]): IArray[Object] =
-    summonAll[Tuple.Map[m.MirroredElemTypes, NativeConverter]]
+    summonAll[Tuple.Map[Tuple.Map[m.MirroredElemTypes, NativeConverter], Lazy]]
       .toIArray
 
   private inline def mirroredElemLabels[A](m: Mirror.Of[A]): IArray[Object] =
@@ -439,7 +439,8 @@ object NativeConverter:
       extension (a: A) def toNative: js.Any =
         val ordinal = m.ordinal(a)
         val obj: js.Dynamic = converters(ordinal)
-          .asInstanceOf[NativeConverter[A]]
+          .asInstanceOf[Lazy[NativeConverter[A]]]
+          .value
           .toNative(a)
           .asInstanceOf[js.Dynamic]
         val typeName = mels(ordinal).asInstanceOf[String]
@@ -451,7 +452,7 @@ object NativeConverter:
           "Missing required @type property: " + JSON.stringify(nativeJs))
         val typeName = nativeJs.asInstanceOf[js.Dynamic].`@type`.asInstanceOf[String]
         val idx = mels.indexOf(typeName)
-        converters(idx).asInstanceOf[NativeConverter[A]].fromNative(nativeJs)
+        converters(idx).asInstanceOf[Lazy[NativeConverter[A]]].value.fromNative(nativeJs)
 
   private inline def productConverter[A](m: Mirror.ProductOf[A]): NativeConverter[A] =
     val converters: IArray[Object] = summonElementConverters(m)
@@ -461,16 +462,17 @@ object NativeConverter:
       extension (a: A) def toNative: js.Any =
         val res = js.Object().asInstanceOf[js.Dynamic]
         val product = a.asInstanceOf[Product]
-        for i <- 0 until converters.length do
+        var i = 0; while i < converters.length do
           val mel = mels(i).asInstanceOf[String]
-          val converter = converters(i).asInstanceOf[NativeConverter[Any]]
+          val converter = converters(i).asInstanceOf[Lazy[NativeConverter[Any]]].value
           res.updateDynamic(mel)(converter.toNative(product.productElement(i)))
+          i += 1
         res
 
       def fromNative(nativeJs: js.Any): A =
         val dict = nativeJs.asInstanceOf[js.Dictionary[js.Any]]
         val resArr = IArray.tabulate(converters.length)(i =>
-          val converter = converters(i).asInstanceOf[NativeConverter[Any]]
+          val converter = converters(i).asInstanceOf[Lazy[NativeConverter[Any]]].value
           val jsonElement = dict.getOrElse(mels(i).asInstanceOf[String], throw IllegalArgumentException(
             s"Json missing required property '${mels(i)}': \n${JSON.stringify(nativeJs)}'"))
           converter.fromNative(jsonElement)
