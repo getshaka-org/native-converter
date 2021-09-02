@@ -284,4 +284,16 @@ class JsonTests:
   end literalTypeDerivations
    */
 
+
+  case class Node(children: List[Node]) derives NativeConverter
+
+  @Test
+  def recursiveTest: Unit =
+    val n = Node(List(Node(Nil), Node(Nil), Node(List(Node(Nil)))))
+    val json =
+      """ {"children":[{"children":[]},{"children":[]},{"children":[{"children":[]}]}]}  """.trim
+    assertEquals(json, n.toJson)
+    assertEquals(n, NativeConverter[Node].fromJson(json))
+
+
     
