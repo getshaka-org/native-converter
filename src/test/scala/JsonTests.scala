@@ -1,4 +1,4 @@
-import org.getshaka.nativeconverter.NativeConverter
+import org.getshaka.nativeconverter.*
 import org.junit.Assert.*
 import org.junit.Test
 
@@ -23,22 +23,22 @@ class JsonTests:
   def jsonPrimitivesTest: Unit =
     import NativeConverter.given
 
-    assertEquals(""""abcd"""", JSON.stringify("abcd".toNative))
+    assertEquals(""""abcd"""", "abcd".toJson)
     assertEquals("abcd", NativeConverter[String].fromNative(JSON.parse(""""abcd"""")))
-    
-    assertEquals("""false""", JSON.stringify(false.toNative))
-    assertEquals(false, NativeConverter[Boolean].fromNative(JSON.parse("""false""")))
+
+    assertEquals("""false""", false.toJson)
+    assertEquals(false, """false""".fromJson[Boolean])
 
     assertEquals("""127""", 127.byteValue.toJson)
-    assertEquals(127.toByte, NativeConverter[Byte].fromNative(JSON.parse("127")))
+    assertEquals(127.toByte, "127".fromJson[Byte])
 
-    assertEquals(Short.MaxValue.toString, JSON.stringify(NativeConverter[Short].toNative(Short.MaxValue)))
-    assertEquals(123.shortValue, NativeConverter[Short].fromNative(JSON.parse("123")))
+    assertEquals(Short.MaxValue.toString, Short.MaxValue.toJson)
+    assertEquals(123.shortValue, "123".fromJson[Short])
 
-    assertEquals("1", JSON.stringify(NativeConverter[Int].toNative(1)))
-    assertEquals(Integer.MIN_VALUE, NativeConverter[Int].fromNative(JSON.parse(Integer.MIN_VALUE.toString)))
+    assertEquals("1", 1.toJson)
+    assertEquals(Int.MinValue, Int.MinValue.toString.fromJson[Int])
     try
-      NativeConverter[Short].fromNative(JSON.parse(Int.MaxValue.toString))
+      Int.MaxValue.toString.fromJson[Short]
       fail("Should not be able to make Short from large Int")
     catch
       case _ => ()
@@ -46,7 +46,7 @@ class JsonTests:
     assertEquals("1.1", JSON.stringify(1.1.toFloat.toNative).substring(0, 3))
     assertEquals(1.1.toFloat, NativeConverter[Float].fromNative(JSON.parse("1.1")), .0001)
 
-    assertEquals(Double.MinValue.toString, JSON.stringify(Double.MinValue.toNative))
+    assertEquals(Double.MinValue.toString, Double.MinValue.toJson)
     assertEquals(Double.MaxValue, NativeConverter[Double].fromNative(JSON.parse(Double.MaxValue.toString)), .0001)
 
     // todo more testing for nulls
@@ -54,26 +54,26 @@ class JsonTests:
 
     val intC = NativeConverter[Int]
     assertEquals(2, intC.fromNative(intC.fromNative(JSON.parse("2")).toNative.toNative))
-    
+
   end jsonPrimitivesTest
-  
+
   @Test
   def jsonOverrideGivenTest: Unit =
     given NativeConverter[Long] with
       extension (t: Long) def toNative: js.Any =
         if t > Int.MaxValue || t < Int.MinValue then t.toString
         else t.toInt.asInstanceOf[js.Any]
-      
+
       def fromNative(nativeJs: js.Any): Long =
         try nativeJs.asInstanceOf[Int]
         catch case _ => nativeJs.asInstanceOf[String].toLong
-        
+
     val bigLongStr = s""" "${Long.MaxValue}" """.trim
-    assertEquals(Long.MaxValue, NativeConverter[Long].fromNative(JSON.parse(bigLongStr)))
-    assertEquals(bigLongStr, JSON.stringify(NativeConverter[Long].toNative(Long.MaxValue)))
-    
-    assertEquals(123L, NativeConverter[Long].fromNative(JSON.parse("123")))
-    assertEquals("123", NativeConverter[Long].toJson(123L))
+    assertEquals(Long.MaxValue, bigLongStr.fromJson[Long])
+    assertEquals(bigLongStr, Long.MaxValue.toJson)
+
+    assertEquals(123L, "123".fromJson[Long])
+    assertEquals("123", 123L.toJson)
 
   case class SimpleProduct(
     a: String,
@@ -91,42 +91,43 @@ class JsonTests:
   def jsonSimpleCaseClassTest: Unit =
     val sp = SimpleProduct("hello", true, 127.toByte, 123, 1.11, Long.MaxValue)
     val spJson = sp.toJson
-    assertEquals(s"""{"a":"hello","b":true,"c":127,"d":123,"e":1.11,"f":"${Long.MaxValue.toString}"}""", spJson)
-    val newSp = NativeConverter[SimpleProduct].fromNative(JSON.parse(spJson))
-    assertEquals(sp, newSp)
-    
+    assertEquals(
+      s"""{"a":"hello","b":true,"c":127,"d":123,"e":1.11,"f":"${Long.MaxValue.toString}"}""",
+      spJson
+    )
+    assertEquals(sp, spJson.fromJson[SimpleProduct])
+
     case class FuncClass(f: String => Long) derives NativeConverter
     val fc = FuncClass(s => Long.MaxValue)
     val nativeFc = fc.toNative.asInstanceOf[js.Dynamic]
     assertEquals(Long.MaxValue, nativeFc.applyDynamic("f")("hello"))
-    val newFc = NativeConverter[FuncClass].fromNative(nativeFc)
+    val newFc = nativeFc.fromNative[FuncClass]
     assertEquals(Long.MaxValue, newFc.f(""))
 
     val nativeJs = JSON.parse(""" {"native": 1337} """)
     case class ClsWithNative(jsObj: js.Any) derives NativeConverter
     assertEquals(""" {"jsObj":{"native":1337}} """.trim, ClsWithNative(nativeJs).toJson)
-    
+
     case class A(x: Int)
     case class B(a: A)
     case class C(b: B) derives NativeConverter
     val c = C(B(A(1234)))
     val strC: String = JSON.stringify(c.toNative)
     assertEquals("""{"b":{"a":{"x":1234}}}""", strC)
-    assertEquals(c, NativeConverter[C].fromNative(JSON.parse(strC)))
-    
+    assertEquals(c, strC.fromJson[C])
+
     case class SingletonCaseClass() derives NativeConverter
     assertEquals(""" {} """.trim, JSON.stringify(SingletonCaseClass().toNative))
-    assertEquals(SingletonCaseClass(),
-      NativeConverter[SingletonCaseClass].fromNative(JSON.parse(""" {} """)))
-    
+    assertEquals(SingletonCaseClass(), """ {} """.fromJson[SingletonCaseClass])
+
     assertEquals(""" {} """.trim, JSON.stringify(CaseObject.toNative))
-    assertEquals(CaseObject, NativeConverter[CaseObject.type].fromNative(JSON.parse(""" {} """)))
-    
+    assertEquals(CaseObject, """ {} """.fromJson[CaseObject.type])
+
   end jsonSimpleCaseClassTest
-  
+
   enum Founder derives NativeConverter:
     case Adams, Washington, Jefferson
-  
+
   enum Color(val rgb: Int) derives NativeConverter:
     case Red extends Color(0xFF0000)
     case Green extends Color(0x00FF00)
@@ -135,7 +136,7 @@ class JsonTests:
   enum Opt[+T] derives NativeConverter:
     case Sm(x: T)
     case Nn
-  
+
   sealed trait O[+T] derives NativeConverter
   case class S[T](x: T) extends O[T]
   case object N extends O[Nothing]
@@ -143,31 +144,33 @@ class JsonTests:
   @Test
   def jsonSimpleEnumTest: Unit =
     assertEquals(""" "Adams" """.trim, JSON.stringify(Founder.Adams.toNative))
-    assertEquals(Founder.Washington, NativeConverter[Founder].fromNative(JSON.parse(""" "Washington" """)))
-    
+    assertEquals(Founder.Washington, """ "Washington" """.fromJson[Founder])
+
     assertEquals(""" "Blue" """.trim, JSON.stringify(Color.Blue.toNative))
-    assertEquals(0x00FF00, NativeConverter[Color].fromNative(JSON.parse(""" "Green" """)).rgb)
-    
+    assertEquals(0x00FF00, """ "Green" """.fromJson[Color].rgb)
+
     assertEquals(""" {"@type":"Nn"} """.trim, JSON.stringify(Opt.Nn.toNative))
     try
-      assertEquals(Opt.Nn, NativeConverter[Opt[Long]].fromNative(JSON.parse(""" "Nn" """)))
+      assertEquals(Opt.Nn, """ "Nn" """.fromJson[Opt[Long]])
       fail("@type should be required")
     catch _ => ()
-    assertEquals(Opt.Nn, NativeConverter[Opt[Long]].fromNative(JSON.parse(""" {"@type":"Nn"} """)))
-    
+    assertEquals(Opt.Nn, """ {"@type":"Nn"} """.fromJson[Opt[Long]])
+
     assertEquals(""" {"x":123,"@type":"Sm"} """.trim, JSON.stringify(Opt.Sm(123).toNative))
-    assertEquals(Opt.Sm(Long.MaxValue),
-      NativeConverter[Opt[Long]].fromNative(JSON.parse(s""" {"x": "${Long.MaxValue}", "@type":"Sm"} """)))
-    
+    assertEquals(
+      Opt.Sm(Long.MaxValue),
+      s""" {"x": "${Long.MaxValue}", "@type":"Sm"} """.fromJson[Opt[Long]]
+    )
+
     try
-      NativeConverter[Opt[Int]].fromNative(JSON.parse("1.1"))
+      "1.1".fromJson[Opt[Int]]
       fail("should not be able to make Opt[Int] given a Double")
     catch case _ => ()
-  
+
     assertEquals(""" {"@type":"N"} """.trim, JSON.stringify(N.toNative))
-    assertEquals(N, NativeConverter[O[String]].fromNative(JSON.parse(""" {"@type":"N"} """)))
+    assertEquals(N, """ {"@type":"N"} """.fromJson[O[String]])
     assertEquals(""" {"x":"123","@type":"S"} """.trim, JSON.stringify(S(123L).toNative))
-    assertEquals(S(123L), NativeConverter[O[Long]].fromNative(JSON.parse(""" {"x":"123","@type":"S"} """)))
+    assertEquals(S(123L), """ {"x":"123","@type":"S"} """.fromJson[O[Long]])
 
   @Test
   def jsonCollectionTest: Unit =
@@ -293,7 +296,7 @@ class JsonTests:
     val json =
       """ {"children":[{"children":[]},{"children":[]},{"children":[{"children":[]}]}]}  """.trim
     assertEquals(json, n.toJson)
-    assertEquals(n, NativeConverter[Node].fromJson(json))
+    assertEquals(n, json.fromJson[Node])
 
 
     
