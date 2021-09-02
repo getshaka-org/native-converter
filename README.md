@@ -2,7 +2,7 @@ A [Scala.js](https://www.scala-js.org/) project that makes it easy to convert to
 
 ```Scala
 import scala.scalajs.js
-import org.getshaka.nativeconverter.NativeConverter
+import org.getshaka.nativeconverter.*
 
 case class User(name: String, isAdmin: Boolean, age: Int) derives NativeConverter
 val u = User("John Smith", true, 42)
@@ -12,8 +12,8 @@ val json: String = u.toJson
 val nativeJsObject: js.Any = u.toNative
 
 // deserialize
-val parsedUser = NativeConverter[User].fromJson(json)
-val parsedUser1 = NativeConverter[User].fromNative(nativeJsObject)
+val parsedUser: User = json.fromJson[User]
+val parsedNativeUser: User = nativeJsObject.fromNative[User]
 ```
 
 The primary goals are:
@@ -36,7 +36,7 @@ This library requires Scala 3. After [setting up a Scala.js project with SBT](ht
 
 In `/project/plugins.sbt` add the latest sbt-dotty and Scala.js plugin:
 ```Scala
-addSbtPlugin("org.scala-js" % "sbt-scalajs" % "1.6.0")
+addSbtPlugin("org.scala-js" % "sbt-scalajs" % "1.7.0")
 ```
 
 Then in `/build.sbt`, set the scala version and add the native-converter dependency:
@@ -195,7 +195,7 @@ enum Opt[+T] derives NativeConverter:
 val nnJson = Opt.Nn.toJson
 
 // Opt.Sm(123L)
-val sm = NativeConverter[Opt[Long]].fromJson(""" {"x":123,"@type":"Sm"} """)
+val sm = """ {"x":123,"@type":"Sm"} """.fromJson[Opt[Long]]
 ```
 
 And of course, you can nest to any depth you wish:
@@ -210,7 +210,7 @@ val yStr = """ {"b":{"a":[]}} """.trim
 
 assertEquals(yStr, y.toJson)
 
-assertEquals(y, NativeConverter[Y].fromJson(yStr))
+assertEquals(y, yStr.fromJson[Y])
 ```
 
 ## Cross Building
