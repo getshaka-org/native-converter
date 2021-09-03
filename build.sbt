@@ -19,5 +19,6 @@ lazy val root = project
         url = url("https://augustnagro.com")
       )
     ),
-    Test / publishArtifact := false
+    Test / publishArtifact := false,
+    sonatypeCredentialHost := "s01.oss.sonatype.org"
   )
