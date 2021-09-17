@@ -2,7 +2,7 @@ A [Scala.js](https://www.scala-js.org/) project that makes it easy to convert to
 
 ```Scala
 import scala.scalajs.js
-import org.getshaka.nativeconverter.*
+import org.getshaka.nativeconverter.{NativeConverter, fromJson, fromNative}
 
 case class User(name: String, isAdmin: Boolean, age: Int) derives NativeConverter
 val u = User("John Smith", true, 42)
