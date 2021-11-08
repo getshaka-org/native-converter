@@ -110,6 +110,13 @@ object NativeConverter:
     extension (n: Null) def toNative: js.Any = n.asInstanceOf[js.Any]
     def fromNative(nativeJs: js.Any): Null = nativeJs.asInstanceOf[Null]
 
+  given jsDateConv: NativeConverter[js.Date] with
+    extension (d: js.Date)
+      def toNative: js.Any = d
+      override def toJson: String = d.toISOString()
+    def fromNative(nativeJs: js.Any): js.Date = nativeJs.asInstanceOf[js.Date]
+    override def fromJson(json: String): js.Date = new js.Date(json)
+
   given jsAnyConv: NativeConverter[js.Any] with
     extension (a: js.Any) def toNative: js.Any = a
     def fromNative(nativeJs: js.Any): js.Any = nativeJs
