@@ -42,10 +42,8 @@ addSbtPlugin("org.scala-js" % "sbt-scalajs" % "1.7.0")
 Then in `/build.sbt`, set the scala version and add the native-converter dependency:
 
 ```Scala
-scalaVersion := "3.0.1",
-
 libraryDependencies ++= Seq(
-  "org.getshaka" %%% "native-converter" % "0.5.2"
+  "org.getshaka" %%% "native-converter" % "0.5.3"
 )
 ```
 
@@ -215,22 +213,9 @@ assertEquals(y, yStr.fromJson[Y])
 
 ## Cross Building
 
-If [Cross Building](https://www.scala-js.org/doc/project/cross-build.html) your Scala project you can use one language for both frontend and backend development. Sub-project `/jvm` will have your JVM sources, `/js` your JavaScript, and in `/shared` you can define all of your validations and request/response DTOs once. In the `/shared` project you do not want to depend on `NativeConverter`, since that would introduce a dependency on Scala.js in your `/jvm` project. So instead of writing `derives NativeConverter` on your case classes, create an object in `/client` that holds the derived converters:
+If [Cross Building](https://www.scala-js.org/doc/project/cross-build.html) your Scala project you can use one language for both frontend and backend development. Sub-project `/jvm` will have your JVM sources, `/js` your JavaScript, and in `/shared` you can define all of your validations and request/response DTOs once. NativeConverter only works in JS, and will throw `UnsupportedOperationException` when used on the JVM.
 
-```Scala
-// in shared project
-case class User(name: String, isAdmin: Boolean, age: Int)
-
-// in js project
-object DtoConverters:
-  given NativeConverter[User] = NativeConverter.derived
-  
-object App:
-  import DtoConverters.given
-
-  @main def launchApp: Unit =
-    println(User("John", false, 21).toJson)
-```
+Make sure to add the `native-converter` library dependency to both the JVM and JS projects, otherwise `/shared` won't compile.
 
 Here is a sample cross-project you can clone: [https://github.com/AugustNagro/native-converter-crossproject](https://github.com/AugustNagro/native-converter-crossproject)
 

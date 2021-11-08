@@ -1,12 +1,13 @@
-lazy val root = project
+lazy val root = crossProject(JVMPlatform, JSPlatform)
+  .crossType(CrossType.Full)
   .in(file("."))
-  .enablePlugins(ScalaJSPlugin, ScalaJSJUnitPlugin)
+  .platformsEnablePlugins(JSPlatform)(ScalaJSJUnitPlugin)
   .settings(
     organization := "org.getshaka",
     name := "native-converter",
     versionScheme := Some("early-semver"),
 
-    scalaVersion := "3.0.1",
+    scalaVersion := "3.0.2",
 
     // publishing settings
     homepage := Some(url("https://github.com/getshaka-org/native-converter")),
@@ -21,4 +22,9 @@ lazy val root = project
     ),
     Test / publishArtifact := false,
     sonatypeCredentialHost := "s01.oss.sonatype.org"
+  )
+  .jvmSettings(
+    libraryDependencies ++= Seq(
+      "com.novocode" % "junit-interface" % "0.11" % "test"
+    )
   )
