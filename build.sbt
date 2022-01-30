@@ -4,6 +4,7 @@ lazy val root = crossProject(JVMPlatform, JSPlatform)
   .platformsEnablePlugins(JSPlatform)(ScalaJSJUnitPlugin)
   .settings(
     organization := "org.getshaka",
+    sonatypeProfileName := organization.value,
     name := "native-converter",
     versionScheme := Some("early-semver"),
 
@@ -21,7 +22,7 @@ lazy val root = crossProject(JVMPlatform, JSPlatform)
       )
     ),
     Test / publishArtifact := false,
-    sonatypeCredentialHost := "s01.oss.sonatype.org"
+    sonatypeCredentialHost := "s01.oss.sonatype.org",
   )
   .jvmSettings(
     libraryDependencies ++= Seq(
