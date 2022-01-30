@@ -25,6 +25,7 @@ The primary goals are:
 * [Installing](#installing)
 * [ScalaDoc](#scaladoc)
 * [Built-In NativeConverters](#built-in-nativeconverters)
+* [Either vs Exceptions](#either-instead-of-exceptions)
 * [Typeclass Derivation](#typeclass-derivation)
 * [Cross Building](#cross-building)
 * [Performance](#performance)
@@ -32,11 +33,11 @@ The primary goals are:
 * [License](#license)
 
 ## Installing
-This library requires Scala 3. After [setting up a Scala.js project with SBT](https://www.scala-js.org/doc/tutorial/basic/),
+This library requires Scala >= 3.1.0. After [setting up a Scala.js project with SBT](https://www.scala-js.org/doc/tutorial/basic/),
 
 In `/project/plugins.sbt` add the latest sbt-dotty and Scala.js plugin:
 ```Scala
-addSbtPlugin("org.scala-js" % "sbt-scalajs" % "1.7.0")
+addSbtPlugin("org.scala-js" % "sbt-scalajs" % "1.7.1")
 ```
 
 Then in `/build.sbt`, set the scala version and add the native-converter dependency:
@@ -68,6 +69,15 @@ val s: String = NativeConverter[String]
   .fromJson(""" "hello world" """)
 ```
 
+### Either instead of Exceptions
+
+If `fromNative` or `fromJson` fail, a RuntimeException is thrown with a helpful error message. If you prefer `Either` instead, use the `fromNativeE` and `fromJsonE` methods.
+
+```scala
+// Left(helpfulErrorMessage)
+val e: Either[String, Int] = NativeConverter[Int].fromJsonE(""" "abc" """)
+```
+
 ### Char, Long, and Overriding the Defaults
 
 Char and Long are always converted to String, since they cannot be represented directly in JavaScript:
@@ -84,15 +94,16 @@ val parsedLong = NativeConverter[Long]
 If you want to change this behavior for Long, implement a `given` instance of NativeConverter[Long]. The example below uses String for conversion only when the Long is bigger than Int.
 
 ```Scala
-given NativeConverter[Long] with
+  given LongConv: NativeConverter[Long] with
+    extension (l: Long) def toNative: js.Any =
+      if l > Int.MaxValue || l < Int.MinValue then l.toString
+      else l.toInt.asInstanceOf[js.Any]
 
-  extension (t: Long) def toNative: js.Any =
-    if t > Int.MaxValue || t < Int.MinValue then t.toString
-    else t.toInt.asInstanceOf[js.Any]
-
-  def fromNative(nativeJs: js.Any): Long =
-    try nativeJs.asInstanceOf[Int]
-    catch case _ => nativeJs.asInstanceOf[String].toLong
+    def fromNativeE(ps: ParseState): Either[String, Long] =
+      ps.json.asInstanceOf[Any] match
+        case i: Int => Right(i)
+        case s: String => s.toLongOption.toRight(ps.left("Long").value)
+        case _ => ps.left("Long")
 
 // "123"
 val smallLong: String = NativeConverter[Long].toJson(123L)
@@ -100,6 +111,8 @@ val smallLong: String = NativeConverter[Long].toJson(123L)
 // """ "9223372036854775807" """.trim
 val bigLong: String = NativeConverter[Long].toJson(Long.MaxValue)
 ```
+
+Note that we must implement `fromNativeE(ps: ParseState)`. The ParseState is used to build helpful error messages.
 
 ### Functions
 
@@ -150,7 +163,7 @@ val mapJson = NativeConverter[Map[String, Int]].toJson(map)
 Only String keys are supported, since JSON requires String keys. If you'd rather convert to an [ES 2016 Map](https://www.scala-js.org/api/scalajs-library/latest/scala/scalajs/js/Map.html), do the following:
 
 ```Scala
-import org.getshaka.nativeconverter.EsConverters.esMapConv
+import org.getshaka.nativeconverter.EsConverters.given
 
 val map = HashMap(1 -> 2, 3 -> 4)
 

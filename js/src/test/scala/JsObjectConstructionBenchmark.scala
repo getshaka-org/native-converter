@@ -10,27 +10,29 @@ parameters in a fast way, since Scala 3 Mirror provides parameter names
 as type constant String.
  */
 object JsObjectConstructionBenchmark:
-  
+
   class C(val a: String, val b: Boolean, val c: Int) extends js.Object
-  
+
   case class D(a: String, b: Boolean, c: Int) derives NativeConverter
-  
+
   @main def bench(): Unit =
     for _ <- 1 to 20 do loop()
-  
+
   def loop(): Unit =
     val limit = 1000000
     val res = Array.ofDim[String](limit)
     var i = 0
-    
+
     var start = js.Date.now()
     while i < limit do
       res(i) = JSON.stringify(C("hello world", true, 69))
       i += 1
     var end = js.Date.now()
+
     def randomJson: String = res(Random.nextInt(res.size))
+
     println(s"ms to make $randomJson classes: ${end - start}")
-  
+
     i = 0
     start = js.Date.now()
     while i < limit do
@@ -38,7 +40,7 @@ object JsObjectConstructionBenchmark:
       i += 1
     end = js.Date.now()
     println(s"ms to make $randomJson literals via tuples: ${end - start}")
-    
+
     i = 0
     start = js.Date.now()
     while i < limit do
@@ -46,7 +48,7 @@ object JsObjectConstructionBenchmark:
       i += 1
     end = js.Date.now()
     println(s"ms to make $randomJson literals: ${end - start}")
-    
+
     i = 0
     start = js.Date.now()
     while i < limit do
@@ -58,7 +60,7 @@ object JsObjectConstructionBenchmark:
       i += 1
     end = js.Date.now()
     println(s"ms to make $randomJson literals via updateDynamic: ${end - start}")
-    
+
     i = 0
     start = js.Date.now()
     while i < limit do
@@ -70,7 +72,7 @@ object JsObjectConstructionBenchmark:
       i += 1
     end = js.Date.now()
     println(s"ms to make $randomJson objects with new js.Object + updateDynamic: ${end - start}")
-  
+
     i = 0
     start = js.Date.now()
     while i < limit do

@@ -64,9 +64,11 @@ class JsonTests:
         if t > Int.MaxValue || t < Int.MinValue then t.toString
         else t.toInt.asInstanceOf[js.Any]
 
-      def fromNative(nativeJs: js.Any): Long =
-        try nativeJs.asInstanceOf[Int]
-        catch case _ => nativeJs.asInstanceOf[String].toLong
+      def fromNativeE(ps: ParseState): Either[String, Long] =
+        ps.json.asInstanceOf[Any] match
+          case i: Int => Right(i)
+          case s: String => s.toLongOption.toRight(ps.left("Long in a String").value)
+          case _ => ps.left("Long")
 
     val bigLongStr = s""" "${Long.MaxValue}" """.trim
     assertEquals(Long.MaxValue, bigLongStr.fromJson[Long])

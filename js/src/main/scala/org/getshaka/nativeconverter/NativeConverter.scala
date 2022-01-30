@@ -1,12 +1,11 @@
 package org.getshaka.nativeconverter
 
 import scala.annotation.implicitNotFound
-import scala.collection.{Iterable, Map, Seq, Set}
-import scala.collection.mutable.{ArrayBuffer, Buffer, HashMap, HashSet}
+import scala.collection.{Iterable, Map, Seq, Set, immutable, mutable}
+import scala.collection.mutable.{ArrayBuffer, Buffer, HashMap, HashSet, Builder}
 import scala.collection.immutable.List
-import scala.collection.immutable
 import scala.deriving.Mirror
-import scala.compiletime.{constValue, constValueTuple, erasedValue, error, summonFrom, summonInline, summonAll}
+import scala.compiletime.{constValue, constValueTuple, erasedValue, error, summonAll, summonFrom, summonInline}
 import scala.reflect.ClassTag
 import scala.scalajs.js
 import scala.scalajs.js.{JSON, WrappedArray, WrappedMap}
@@ -18,352 +17,440 @@ import scala.scalajs.js.{JSON, WrappedArray, WrappedMap}
 @implicitNotFound("Could not find an implicit NativeConverter[${A}]")
 trait NativeConverter[A]:
   extension (a: A)
-   /**
-    * Convert a Scala.js type to native JavaScript.
-    * <br>
-    * This is an extension method, so it's available on all types
-    * that `derive NativeConverter`. To use for other types, like Int, summon
-    * a NativeConverter and use: `NativeConverter[Int].toNative(123)`
-    * <br>
-    * Any RuntimeException subclass may be thrown if conversion fails.
-    */
+    /**
+     * Convert a Scala.js type to native JavaScript.
+     *
+     * This is an extension method, so it's available on all types
+     * that `derive NativeConverter`. To use for other types, like Int, summon
+     * a NativeConverter and use: `NativeConverter[Int].toNative(123)`
+     */
     def toNative: js.Any
 
-    /**
-     * Convert type A to a JSON string
-     * <br>
-     * Any RuntimeException subclass may be thrown if conversion fails.
-     */
+    /** Convert type A to a JSON string */
     def toJson: String = JSON.stringify(a.toNative)
 
   /**
    * Convert a native Javascript type to Scala.js.
-   * <br>
-   * Any RuntimeException subclass may be thrown if conversion fails.
+   * Returns either A, or a String error.
    */
-  def fromNative(nativeJs: js.Any): A
+  def fromNativeE(ps: ParseState): Either[String, A]
 
   /**
-   * Convert a Json String to type A
-   * <br>
-   * Any RuntimeException subclass may be thrown if conversion fails.
+   * Convert a native Javascript type to Scala.js.
+   * Returns either A, or a String error.
    */
-  def fromJson(json: String): A = fromNative(JSON.parse(json))
+  def fromNativeE(nativeJs: js.Any): Either[String, A] =
+    fromNativeE(ParseState(nativeJs))
+
+  /**
+   * Convert a native Javascript type to Scala.js.
+   * Returns A, or throws.
+   */
+  def fromNative(nativeJs: js.Any): A =
+    fromNativeE(nativeJs) match
+      case Right(a) => a
+      case Left(e) => throw RuntimeException(e)
+
+  /**
+   * Convert a Json String to type A.
+   * Returns either A, or a String error.
+   */
+  def fromJsonE(json: String): Either[String, A] =
+    try fromNativeE(JSON.parse(json))
+    catch case t => Left("Not valid Json: \n" + json)
+
+  /**
+   * Convert a Json String to type A.
+   * Returns A, or throws.
+   */
+  def fromJson(json: String): A =
+    fromJsonE(json) match
+      case Right(a) => a
+      case Left(e) => throw RuntimeException(e)
 
 object NativeConverter:
 
-  /**
-   * Helper method so summoning NativeConverters may be done with
-   * `NativeConverter[A].fromNative(..)`, instead of
-   * `summon[NativeConverter[A]].fromNative(..)`.
-   */
-  inline def apply[A](using nc: NativeConverter[A]) = nc
+  inline def apply[A](using nc: NativeConverter[A]): NativeConverter[A] = nc
 
-  /*
-  Here we define some base type-classes. Most of the primitive types
-  like String and Boolean have the same representation in Scala.js and JavaScript,
-  so we just need to cast.
-   */
+  private type ImplicitlyJsAny = String | Boolean | Byte | Short | Int | Float | Double | Null | js.Any
 
-  /**
-   * These types are already implicitly native Javascript
-   */
-  private type ImplicitlyJsAny = (String | Boolean | Byte | Short | Int | Float | Double | Null | js.Any)
-
-  given stringConv: NativeConverter[String] with
+  given StringConv: NativeConverter[String] with
     extension (s: String) def toNative: js.Any = s.asInstanceOf[js.Any]
-    def fromNative(nativeJs: js.Any): String = nativeJs.asInstanceOf[String]
+    def fromNativeE(ps: ParseState): Either[String, String] =
+      ps.json.asInstanceOf[Any] match
+        case s: String => Right(s)
+        case _ => ps.left("String")
 
-  given booleanConv: NativeConverter[Boolean] with
+  given BooleanConv: NativeConverter[Boolean] with
     extension (b: Boolean) def toNative: js.Any = b.asInstanceOf[js.Any]
-    def fromNative(nativeJs: js.Any): Boolean = nativeJs.asInstanceOf[Boolean]
+    def fromNativeE(ps: ParseState): Either[String, Boolean] =
+      ps.json.asInstanceOf[Any] match
+        case b: Boolean => Right(b)
+        case _ => ps.left("Boolean")
 
-  given byteConv: NativeConverter[Byte] with
+  given ByteConv: NativeConverter[Byte] with
     extension (b: Byte) def toNative: js.Any = b.asInstanceOf[js.Any]
-    def fromNative(nativeJs: js.Any): Byte = nativeJs.asInstanceOf[Byte]
+    def fromNativeE(ps: ParseState): Either[String, Byte] =
+      ps.json.asInstanceOf[Any] match
+        case b: Byte => Right(b)
+        case _ => ps.left("Byte")
 
-  given shortConv: NativeConverter[Short] with
+  given ShortConv: NativeConverter[Short] with
     extension (s: Short) def toNative: js.Any = s.asInstanceOf[js.Any]
-    def fromNative(nativeJs: js.Any): Short = nativeJs.asInstanceOf[Short]
+    def fromNativeE(ps: ParseState): Either[String, Short] =
+      ps.json.asInstanceOf[Any] match
+        case s: Short => Right(s)
+        case _ => ps.left("Short")
 
-  given intConv: NativeConverter[Int] with
+  given IntConv: NativeConverter[Int] with
     extension (i: Int) def toNative: js.Any = i.asInstanceOf[js.Any]
-    def fromNative(nativeJs: js.Any): Int = nativeJs.asInstanceOf[Int]
+    def fromNativeE(ps: ParseState): Either[String, Int] =
+      ps.json.asInstanceOf[Any] match
+        case i: Int => Right(i)
+        case _ => ps.left("Int")
 
   /**
    * Infinity and NaN are not supported, since JSON does not support
    * serializing those values.
    */
-  given floatConv: NativeConverter[Float] with
+  given FloatConv: NativeConverter[Float] with
     extension (f: Float) def toNative: js.Any = f.asInstanceOf[js.Any]
-    def fromNative(nativeJs: js.Any): Float = nativeJs.asInstanceOf[Float]
+    def fromNativeE(ps: ParseState): Either[String, Float] =
+      ps.json.asInstanceOf[Any] match
+        case f: Float => Right(f)
+        case _ => ps.left("Float")
 
   /**
    * Infinity and NaN are not supported, since JSON does not support
    * serializing those values.
    */
-  given doubleConv: NativeConverter[Double] with
+  given DoubleConv: NativeConverter[Double] with
     extension (d: Double) def toNative: js.Any = d.asInstanceOf[js.Any]
-    def fromNative(nativeJs: js.Any): Double = nativeJs.asInstanceOf[Double]
+    def fromNativeE(ps: ParseState): Either[String, Double] =
+      ps.json.asInstanceOf[Any] match
+        case d: Double => Right(d)
+        case _ => ps.left("Float")
 
-  given nullConv: NativeConverter[Null] with
+  given NullConv: NativeConverter[Null] with
     extension (n: Null) def toNative: js.Any = n.asInstanceOf[js.Any]
-    def fromNative(nativeJs: js.Any): Null = nativeJs.asInstanceOf[Null]
+    def fromNativeE(ps: ParseState): Either[String, Null] =
+      ps.json.asInstanceOf[Any] match
+        case null => Right(null)
+        case _ => ps.left("null")
 
-  given jsDateConv: NativeConverter[js.Date] with
+  given JSDateConv: NativeConverter[js.Date] with
     extension (d: js.Date)
       def toNative: js.Any = d
-      override def toJson: String = d.toISOString()
-    def fromNative(nativeJs: js.Any): js.Date = nativeJs.asInstanceOf[js.Date]
-    override def fromJson(json: String): js.Date = new js.Date(json)
+      override def toJson: String = d.toISOString
+    def fromNativeE(ps: ParseState): Either[String, js.Date] =
+      ps.json match
+        case d: js.Date => Right(d)
+        case _ => ps.left("js.Date")
+    override def fromJsonE(json: String): Either[String, js.Date] =
+      try Right(new js.Date(json))
+      catch case t => Left("Invalid ISO JS Date: \n" + json)
 
-  given jsAnyConv: NativeConverter[js.Any] with
+  given JSAnyConv: NativeConverter[js.Any] with
     extension (a: js.Any) def toNative: js.Any = a
-    def fromNative(nativeJs: js.Any): js.Any = nativeJs
+    def fromNativeE(ps: ParseState): Either[String, js.Any] = Right(ps.json)
 
   /*
   Char Long, etc, don't precisely map to JS, so the conversion is debatable.
   Good thing is that they can be easily overriden.
-   */
+  */
 
-  given charConv: NativeConverter[Char] with
+  given CharConv: NativeConverter[Char] with
     extension (c: Char) def toNative: js.Any = c.toString
-    def fromNative(nativeJs: js.Any): Char = nativeJs.asInstanceOf[String].charAt(0)
+    def fromNativeE(ps: ParseState): Either[String, Char] =
+      ps.json.asInstanceOf[Any] match
+        case s: String if s.nonEmpty => Right(s.charAt(0))
+        case _ => ps.left("Char")
 
-  given longConv: NativeConverter[Long] with
+  given LongConv: NativeConverter[Long] with
     extension (l: Long) def toNative: js.Any = l.toString
-    def fromNative(nativeJs: js.Any): Long = nativeJs.asInstanceOf[String].toLong
-  
+    def fromNativeE(ps: ParseState): Either[String, Long] =
+      ps.json.asInstanceOf[Any] match
+        case i: Int => Right(i)
+        case s: String => s.toLongOption.toRight(ps.left("Long").value)
+        case _ => ps.left("Long")
+
   /*
   Functions are converted with Scala.js's helper methods in js.Any
-   */
+  */
 
-  given fConv[A]: NativeConverter[Function0[A]] with
+  given F0Conv[A]: NativeConverter[Function0[A]] with
     extension (f: Function0[A]) def toNative: js.Any =
       js.Any.fromFunction0(f)
-    def fromNative(nativeJs: js.Any): Function0[A] =
-      js.Any.toFunction0(nativeJs.asInstanceOf[js.Function0[A]])
+    def fromNativeE(ps: ParseState): Either[String, Function0[A]] =
+      Right(js.Any.toFunction0(ps.json.asInstanceOf[js.Function0[A]]))
 
-  given f1Conv[A, B]: NativeConverter[Function1[A, B]] with
+  given F1Conv[A, B]: NativeConverter[Function1[A, B]] with
     extension (f: Function1[A, B]) def toNative: js.Any =
       js.Any.fromFunction1(f)
-    def fromNative(nativeJs: js.Any): Function1[A, B] =
-      js.Any.toFunction1(nativeJs.asInstanceOf[js.Function1[A, B]])
+    def fromNativeE(ps: ParseState): Either[String, Function1[A, B]] =
+      Right(js.Any.toFunction1(ps.json.asInstanceOf[js.Function1[A, B]]))
 
-  given f2Conv[A, B, C]: NativeConverter[Function2[A, B, C]] with
+  given F2Conv[A, B, C]: NativeConverter[Function2[A, B, C]] with
     extension (f: Function2[A, B, C]) def toNative: js.Any =
       js.Any.fromFunction2(f)
-    def fromNative(nativeJs: js.Any): Function2[A, B, C] =
-      js.Any.toFunction2(nativeJs.asInstanceOf[js.Function2[A, B, C]])
+    def fromNativeE(ps: ParseState): Either[String, Function2[A, B, C]] =
+      Right(js.Any.toFunction2(ps.json.asInstanceOf[js.Function2[A, B, C]]))
 
-  given f3Conv[A, B, C, D]: NativeConverter[Function3[A, B, C, D]] with
+  given F3Conv[A, B, C, D]: NativeConverter[Function3[A, B, C, D]] with
     extension (f: Function3[A, B, C, D]) def toNative: js.Any =
       js.Any.fromFunction3(f)
-    def fromNative(nativeJs: js.Any): Function3[A, B, C, D] =
-      js.Any.toFunction3(nativeJs.asInstanceOf[js.Function3[A, B, C, D]])
-      
-  given f4Conv[A, B, C, D, E]: NativeConverter[Function4[A, B, C, D, E]] with
+    def fromNativeE(ps: ParseState): Either[String, Function3[A, B, C, D]] =
+      Right(js.Any.toFunction3(ps.json.asInstanceOf[js.Function3[A, B, C, D]]))
+
+  given F4Conv[A, B, C, D, E]: NativeConverter[Function4[A, B, C, D, E]] with
     extension (f: Function4[A, B, C, D, E]) def toNative: js.Any =
       js.Any.fromFunction4(f)
-    def fromNative(nativeJs: js.Any): Function4[A, B, C, D, E] =
-      js.Any.toFunction4(nativeJs.asInstanceOf[js.Function4[A, B, C, D, E]])
+    def fromNativeE(ps: ParseState): Either[String, Function4[A, B, C, D, E]] =
+      Right(js.Any.toFunction4(ps.json.asInstanceOf[js.Function4[A, B, C, D, E]]))
 
-  given f5Conv[A, B, C, D, E, F]: NativeConverter[Function5[A, B, C, D, E, F]] with
+  given F5Conv[A, B, C, D, E, F]: NativeConverter[Function5[A, B, C, D, E, F]] with
     extension (f: Function5[A, B, C, D, E, F]) def toNative: js.Any =
       js.Any.fromFunction5(f)
-    def fromNative(nativeJs: js.Any): Function5[A, B, C, D, E, F] =
-      js.Any.toFunction5(nativeJs.asInstanceOf[js.Function5[A, B, C, D, E, F]])
-      
-  given f6Conv[A, B, C, D, E, F, G]: NativeConverter[Function6[A, B, C, D, E, F, G]] with
+    def fromNativeE(ps: ParseState): Either[String, Function5[A, B, C, D, E, F]] =
+      Right(js.Any.toFunction5(ps.json.asInstanceOf[js.Function5[A, B, C, D, E, F]]))
+
+  given F6Conv[A, B, C, D, E, F, G]: NativeConverter[Function6[A, B, C, D, E, F, G]] with
     extension (f: Function6[A, B, C, D, E, F, G]) def toNative: js.Any =
       js.Any.fromFunction6(f)
-    def fromNative(nativeJs: js.Any): Function6[A, B, C, D, E, F, G] =
-      js.Any.toFunction6(nativeJs.asInstanceOf[js.Function6[A, B, C, D, E, F, G]])
-      
-  given f7Conv[A, B, C, D, E, F, G, H]: NativeConverter[Function7[A, B, C, D, E, F, G, H]] with
-    extension (t: Function7[A, B, C, D, E, F, G, H]) def toNative: js.Any =
-      js.Any.fromFunction7(t)
-    def fromNative(nativeJs: js.Any): Function7[A, B, C, D, E, F, G, H] =
-      js.Any.toFunction7(nativeJs.asInstanceOf[js.Function7[A, B, C, D, E, F, G, H]])
-      
-  given f8Conv[A, B, C, D, E, F, G, H, I]: NativeConverter[Function8[A, B, C, D, E, F, G, H, I]] with
+    def fromNativeE(ps: ParseState): Either[String, Function6[A, B, C, D, E, F, G]] =
+      Right(js.Any.toFunction6(ps.json.asInstanceOf[js.Function6[A, B, C, D, E, F, G]]))
+
+  given F7Conv[A, B, C, D, E, F, G, H]: NativeConverter[Function7[A, B, C, D, E, F, G, H]] with
+    extension (f: Function7[A, B, C, D, E, F, G, H]) def toNative: js.Any =
+      js.Any.fromFunction7(f)
+    def fromNativeE(ps: ParseState): Either[String, Function7[A, B, C, D, E, F, G, H]] =
+      Right(js.Any.toFunction7(ps.json.asInstanceOf[js.Function7[A, B, C, D, E, F, G, H]]))
+
+  given F8Conv[A, B, C, D, E, F, G, H, I]: NativeConverter[Function8[A, B, C, D, E, F, G, H, I]] with
     extension (f: Function8[A, B, C, D, E, F, G, H, I]) def toNative: js.Any =
       js.Any.fromFunction8(f)
-    def fromNative(nativeJs: js.Any): Function8[A, B, C, D, E, F, G, H, I] =
-      js.Any.toFunction8(nativeJs.asInstanceOf[js.Function8[A, B, C, D, E, F, G, H, I]])
-      
-  given f9Conv[A, B, C, D, E, F, G, H, I, J]: NativeConverter[Function9[A, B, C, D, E, F, G, H, I, J]] with
+    def fromNativeE(ps: ParseState): Either[String, Function8[A, B, C, D, E, F, G, H, I]] =
+      Right(js.Any.toFunction8(ps.json.asInstanceOf[js.Function8[A, B, C, D, E, F, G, H, I]]))
+
+  given F9Conv[A, B, C, D, E, F, G, H, I, J]: NativeConverter[Function9[A, B, C, D, E, F, G, H, I, J]] with
     extension (f: Function9[A, B, C, D, E, F, G, H, I, J]) def toNative: js.Any =
       js.Any.fromFunction9(f)
-    def fromNative(nativeJs: js.Any): Function9[A, B, C, D, E, F, G, H, I, J] =
-      js.Any.toFunction9(nativeJs.asInstanceOf[js.Function9[A, B, C, D, E, F, G, H, I, J]])
-      
-  given f10Conv[A, B, C, D, E, F, G, H, I, J, K]: NativeConverter[Function10[A, B, C, D, E, F, G, H, I, J, K]] with
+    def fromNativeE(ps: ParseState): Either[String, Function9[A, B, C, D, E, F, G, H, I, J]] =
+      Right(js.Any.toFunction9(ps.json.asInstanceOf[js.Function9[A, B, C, D, E, F, G, H, I, J]]))
+
+  given F10Conv[A, B, C, D, E, F, G, H, I, J, K]: NativeConverter[Function10[A, B, C, D, E, F, G, H, I, J, K]] with
     extension (f: Function10[A, B, C, D, E, F, G, H, I, J, K]) def toNative: js.Any =
       js.Any.fromFunction10(f)
-    def fromNative(nativeJs: js.Any): Function10[A, B, C, D, E, F, G, H, I, J, K] =
-      js.Any.toFunction10(nativeJs.asInstanceOf[js.Function10[A, B, C, D, E, F, G, H, I, J, K]])
-      
-  given f11Conv[A, B, C, D, E, F, G, H, I, J, K, L]: NativeConverter[Function11[A, B, C, D, E, F, G, H, I, J, K, L]] with
+    def fromNativeE(ps: ParseState): Either[String, Function10[A, B, C, D, E, F, G, H, I, J, K]] =
+      Right(js.Any.toFunction10(ps.json.asInstanceOf[js.Function10[A, B, C, D, E, F, G, H, I, J, K]]))
+
+  given F11Conv[A, B, C, D, E, F, G, H, I, J, K, L]: NativeConverter[Function11[A, B, C, D, E, F, G, H, I, J, K, L]] with
     extension (f: Function11[A, B, C, D, E, F, G, H, I, J, K, L]) def toNative: js.Any =
       js.Any.fromFunction11(f)
-    def fromNative(nativeJs: js.Any): Function11[A, B, C, D, E, F, G, H, I, J, K, L] =
-      js.Any.toFunction11(nativeJs.asInstanceOf[js.Function11[A, B, C, D, E, F, G, H, I, J, K, L]])
+    def fromNativeE(ps: ParseState): Either[String, Function11[A, B, C, D, E, F, G, H, I, J, K, L]] =
+      Right(js.Any.toFunction11(ps.json.asInstanceOf[js.Function11[A, B, C, D, E, F, G, H, I, J, K, L]]))
 
-  given f12Conv[A, B, C, D, E, F, G, H, I, J, K, L, M]: NativeConverter[Function12[A, B, C, D, E, F, G, H, I, J, K, L, M]] with
+  given F12Conv[A, B, C, D, E, F, G, H, I, J, K, L, M]: NativeConverter[Function12[A, B, C, D, E, F, G, H, I, J, K, L, M]] with
     extension (f: Function12[A, B, C, D, E, F, G, H, I, J, K, L, M]) def toNative: js.Any =
       js.Any.fromFunction12(f)
-    def fromNative(nativeJs: js.Any): Function12[A, B, C, D, E, F, G, H, I, J, K, L, M] =
-      js.Any.toFunction12(nativeJs.asInstanceOf[js.Function12[A, B, C, D, E, F, G, H, I, J, K, L, M]])
-    
-  given f13Conv[A, B, C, D, E, F, G, H, I, J, K, L, M, N]: NativeConverter[Function13[A, B, C, D, E, F, G, H, I, J, K, L, M, N]] with
+    def fromNativeE(ps: ParseState): Either[String, Function12[A, B, C, D, E, F, G, H, I, J, K, L, M]] =
+      Right(js.Any.toFunction12(ps.json.asInstanceOf[js.Function12[A, B, C, D, E, F, G, H, I, J, K, L, M]]))
+
+  given F13Conv[A, B, C, D, E, F, G, H, I, J, K, L, M, N]: NativeConverter[Function13[A, B, C, D, E, F, G, H, I, J, K, L, M, N]] with
     extension (f: Function13[A, B, C, D, E, F, G, H, I, J, K, L, M, N]) def toNative: js.Any =
       js.Any.fromFunction13(f)
-    def fromNative(nativeJs: js.Any): Function13[A, B, C, D, E, F, G, H, I, J, K, L, M, N] =
-      js.Any.toFunction13(nativeJs.asInstanceOf[js.Function13[A, B, C, D, E, F, G, H, I, J, K, L, M, N]])
-    
-  given f14Conv[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O]: NativeConverter[Function14[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O]] with
+    def fromNativeE(ps: ParseState): Either[String, Function13[A, B, C, D, E, F, G, H, I, J, K, L, M, N]] =
+      Right(js.Any.toFunction13(ps.json.asInstanceOf[js.Function13[A, B, C, D, E, F, G, H, I, J, K, L, M, N]]))
+
+  given F14Conv[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O]: NativeConverter[Function14[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O]] with
     extension (f: Function14[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O]) def toNative: js.Any =
       js.Any.fromFunction14(f)
-    def fromNative(nativeJs: js.Any): Function14[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O] =
-      js.Any.toFunction14(nativeJs.asInstanceOf[js.Function14[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O]])
-  
-  given f15Conv[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P]: NativeConverter[Function15[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P]] with
+    def fromNativeE(ps: ParseState): Either[String, Function14[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O]] =
+      Right(js.Any.toFunction14(ps.json.asInstanceOf[js.Function14[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O]]))
+
+  given F15Conv[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P]: NativeConverter[Function15[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P]] with
     extension (f: Function15[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P]) def toNative: js.Any =
       js.Any.fromFunction15(f)
-    def fromNative(nativeJs: js.Any): Function15[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P] =
-      js.Any.toFunction15(nativeJs.asInstanceOf[js.Function15[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P]])
-      
-  given f16Conv[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q]: NativeConverter[Function16[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q]] with
+    def fromNativeE(ps: ParseState): Either[String, Function15[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P]] =
+      Right(js.Any.toFunction15(ps.json.asInstanceOf[js.Function15[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P]]))
+
+  given F16Conv[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q]: NativeConverter[Function16[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q]] with
     extension (f: Function16[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q]) def toNative: js.Any =
       js.Any.fromFunction16(f)
-    def fromNative(nativeJs: js.Any): Function16[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q] =
-      js.Any.toFunction16(nativeJs.asInstanceOf[js.Function16[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q]])
-    
-  given f17Conv[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R]: NativeConverter[Function17[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R]] with
+    def fromNativeE(ps: ParseState): Either[String, Function16[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q]] =
+      Right(js.Any.toFunction16(ps.json.asInstanceOf[js.Function16[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q]]))
+
+  given F17Conv[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R]: NativeConverter[Function17[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R]] with
     extension (f: Function17[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R]) def toNative: js.Any =
       js.Any.fromFunction17(f)
-    def fromNative(nativeJs: js.Any): Function17[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R] =
-      js.Any.toFunction17(nativeJs.asInstanceOf[js.Function17[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R]])
-    
-  given f18Conv[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S]: NativeConverter[Function18[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S]] with
+    def fromNativeE(ps: ParseState): Either[String, Function17[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R]] =
+      Right(js.Any.toFunction17(ps.json.asInstanceOf[js.Function17[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R]]))
+
+  given F18Conv[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S]: NativeConverter[Function18[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S]] with
     extension (f: Function18[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S]) def toNative: js.Any =
       js.Any.fromFunction18(f)
-    def fromNative(nativeJs: js.Any): Function18[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S] =
-      js.Any.toFunction18(nativeJs.asInstanceOf[js.Function18[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S]])
+    def fromNativeE(ps: ParseState): Either[String, Function18[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S]] =
+      Right(js.Any.toFunction18(ps.json.asInstanceOf[js.Function18[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S]]))
 
-  given f19Conv[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T]: NativeConverter[Function19[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T]] with
+  given F19Conv[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T]: NativeConverter[Function19[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T]] with
     extension (f: Function19[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T]) def toNative: js.Any =
       js.Any.fromFunction19(f)
-    def fromNative(nativeJs: js.Any): Function19[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T] =
-      js.Any.toFunction19(nativeJs.asInstanceOf[js.Function19[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T]])
+    def fromNativeE(ps: ParseState): Either[String, Function19[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T]] =
+      Right(js.Any.toFunction19(ps.json.asInstanceOf[js.Function19[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T]]))
 
-    given f20Conv[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U]: NativeConverter[Function20[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U]] with
-      extension (f: Function20[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U]) def toNative: js.Any =
-        js.Any.fromFunction20(f)
-      def fromNative(nativeJs: js.Any): Function20[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U] =
-        js.Any.toFunction20(nativeJs.asInstanceOf[js.Function20[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U]])
-  
-  given f21Conv[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V]: NativeConverter[Function21[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V]] with
+  given F20Conv[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U]: NativeConverter[Function20[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U]] with
+    extension (f: Function20[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U]) def toNative: js.Any =
+      js.Any.fromFunction20(f)
+    def fromNativeE(ps: ParseState): Either[String, Function20[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U]] =
+      Right(js.Any.toFunction20(ps.json.asInstanceOf[js.Function20[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U]]))
+
+  given F21Conv[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V]: NativeConverter[Function21[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V]] with
     extension (f: Function21[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V]) def toNative: js.Any =
       js.Any.fromFunction21(f)
-    def fromNative(nativeJs: js.Any): Function21[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V] =
-      js.Any.toFunction21(nativeJs.asInstanceOf[js.Function21[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V]])
+    def fromNativeE(ps: ParseState): Either[String, Function21[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V]] =
+      Right(js.Any.toFunction21(ps.json.asInstanceOf[js.Function21[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V]]))
 
-  given f22Conv[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W]: NativeConverter[Function22[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W]] with
+  given F22Conv[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W]: NativeConverter[Function22[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W]] with
     extension (f: Function22[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W]) def toNative: js.Any =
       js.Any.fromFunction22(f)
-    def fromNative(nativeJs: js.Any): Function22[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W] =
-      js.Any.toFunction22(nativeJs.asInstanceOf[js.Function22[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W]])
-  
-  /*
-  Collection types. Arrays, Iterables, Seqs, Sets, Lists, and Buffers
-  are serialized using JavaScript Arrays. Maps become JS objects, although only
-  String keys are supported, like in JSON. The EsConverters class has conversions
-  to js.Map.
-   */
-  
-  private def makeNativeArray[T: NativeConverter](it: Iterable[T]): js.Array[js.Any] =
+    def fromNativeE(ps: ParseState): Either[String, Function22[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W]] =
+      Right(js.Any.toFunction22(ps.json.asInstanceOf[js.Function22[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W]]))
+
+  private def makeNativeArray[A: NativeConverter](it: Iterable[A]): js.Array[js.Any] =
     val res = js.Array[js.Any]()
     for t <- it do res.push(t.toNative)
     res
 
-  given arrayConv[A: ClassTag](using nc: NativeConverter[A]): NativeConverter[Array[A]] with
+  private def asJSArray(ps: ParseState): Either[String, js.Array[js.Any]] =
+    ps.json match
+      case a: js.Array[?] => Right(a.asInstanceOf[js.Array[js.Any]])
+      case _ => ps.left("js.Array")
+
+  private def jsonArrayToCollection[A, C[_]](
+    ps: ParseState,
+    arr: js.Array[js.Any],
+    resBuilder: Builder[A, C[A]]
+  )(using nc: NativeConverter[A]): Either[String, C[A]] =
+    resBuilder.sizeHint(arr.length)
+
+    var i = 0
+    val it = arr.iterator
+    while it.hasNext do
+      val part = nc.fromNativeE(ps.atIndex(i, it.next()))
+      i += 1
+      part match
+        case l: Left[?, ?] => return l.asInstanceOf[Left[String, C[A]]]
+        case Right(a) => resBuilder.addOne(a)
+
+    Right(resBuilder.result())
+
+  private def jsToCollection[A: NativeConverter, C[_]](
+    ps: ParseState,
+    builder: Builder[A, C[A]]
+  ): Either[String, C[A]] =
+    for
+      jsArr <- asJSArray(ps)
+      col <- jsonArrayToCollection(ps, jsArr, builder)
+    yield col
+
+  given ArrayConv[A: ClassTag: NativeConverter]: NativeConverter[Array[A]] with
     extension (a: Array[A]) def toNative: js.Any = makeNativeArray(a)
-    def fromNative(nativeJs: js.Any): Array[A] =
-      nativeJs.asInstanceOf[js.Array[js.Any]].view.map(nc.fromNative).toArray
+    def fromNativeE(ps: ParseState): Either[String, Array[A]] = jsToCollection(ps, Array.newBuilder)
 
-  given iArrayConv[A: ClassTag](using nc: NativeConverter[A]): NativeConverter[IArray[A]] with
+  given IArrayConv[A: ClassTag: NativeConverter]: NativeConverter[IArray[A]] with
     extension (a: IArray[A]) def toNative: js.Any = makeNativeArray(a)
-    def fromNative(nativeJs: js.Any): IArray[A] =
-      IArray.from(nativeJs.asInstanceOf[js.Array[js.Any]].view.map(nc.fromNative))
+    def fromNativeE(ps: ParseState): Either[String, IArray[A]] = jsToCollection(ps, IArray.newBuilder)
 
-  given iterableConv[A](using nc: NativeConverter[A]): NativeConverter[Iterable[A]] with
-    extension (i: Iterable[A]) def toNative: js.Any = makeNativeArray(i)
-    def fromNative(nativeJs: js.Any): Iterable[A] =
-      nativeJs.asInstanceOf[js.Array[js.Any]].map(nc.fromNative)
+  given IterableConv[A: NativeConverter]: NativeConverter[Iterable[A]] with
+    extension (a: Iterable[A]) def toNative: js.Any = makeNativeArray(a)
+    def fromNativeE(ps: ParseState): Either[String, Iterable[A]] = jsToCollection(ps, ArrayBuffer.newBuilder)
 
-  given seqConv[A](using nc: NativeConverter[A]): NativeConverter[Seq[A]] with
+  given SeqConv[A: NativeConverter]: NativeConverter[Seq[A]] with
     extension (s: Seq[A]) def toNative: js.Any = makeNativeArray(s)
-    def fromNative(nativeJs: js.Any): Seq[A] =
-      nativeJs.asInstanceOf[js.Array[js.Any]].map(nc.fromNative)
+    def fromNativeE(ps: ParseState): Either[String, Seq[A]] = jsToCollection(ps, ArrayBuffer.newBuilder)
 
-  given immutableSeqConv[A](using nc: NativeConverter[A]): NativeConverter[immutable.Seq[A]] with
+  given ImmutableSeqConv[A: NativeConverter]: NativeConverter[immutable.Seq[A]] with
     extension (s: immutable.Seq[A]) def toNative: js.Any = makeNativeArray(s)
-    def fromNative(nativeJs: js.Any): immutable.Seq[A] =
-      nativeJs.asInstanceOf[js.Array[js.Any]].view.map(nc.fromNative).toSeq
+    def fromNativeE(ps: ParseState): Either[String, immutable.Seq[A]] = jsToCollection(ps, immutable.Seq.newBuilder)
 
-  given setConv[A](using nc: NativeConverter[A]): NativeConverter[Set[A]] with
+  given SetCodec[A: NativeConverter]: NativeConverter[Set[A]] with
     extension (s: Set[A]) def toNative: js.Any = makeNativeArray(s)
-    def fromNative(nativeJs: js.Any): Set[A] =
-      HashSet.from(nativeJs.asInstanceOf[js.Array[js.Any]].view.map(nc.fromNative))
+    def fromNativeE(ps: ParseState): Either[String, Set[A]] = jsToCollection(ps, HashSet.newBuilder)
 
-  given immutableSetConv[A](using nc: NativeConverter[A]): NativeConverter[immutable.Set[A]] with
+  given ImmutableSetCodec[A: NativeConverter]: NativeConverter[immutable.Set[A]] with
     extension (s: immutable.Set[A]) def toNative: js.Any = makeNativeArray(s)
-    def fromNative(nativeJs: js.Any): immutable.Set[A] =
-      nativeJs.asInstanceOf[js.Array[js.Any]].view.map(nc.fromNative).toSet
+    def fromNativeE(ps: ParseState): Either[String, immutable.Set[A]] = jsToCollection(ps, immutable.Set.newBuilder)
 
-  given listConv[A](using nc: NativeConverter[A]): NativeConverter[List[A]] with
+  given ListConv[A: NativeConverter]: NativeConverter[List[A]] with
     extension (l: List[A]) def toNative: js.Any = makeNativeArray(l)
-    def fromNative(nativeJs: js.Any): List[A] =
-      nativeJs.asInstanceOf[js.Array[js.Any]].view.map(nc.fromNative).toList
+    def fromNativeE(ps: ParseState): Either[String, List[A]] = jsToCollection(ps, List.newBuilder)
 
-  given bufferConv[A](using nc: NativeConverter[A]): NativeConverter[Buffer[A]] with
+  given BufferConv[A: NativeConverter]: NativeConverter[Buffer[A]] with
     extension (b: Buffer[A]) def toNative: js.Any = makeNativeArray(b)
-    def fromNative(nativeJs: js.Any): Buffer[A] =
-      nativeJs.asInstanceOf[js.Array[js.Any]].view.map(nc.fromNative).toBuffer
+    def fromNativeE(ps: ParseState): Either[String, mutable.Buffer[A]] = jsToCollection(ps, ArrayBuffer.newBuilder)
 
-  given mapConv[A](using nc: NativeConverter[A]): NativeConverter[Map[String, A]] with
+  private def asJSDict(ps: ParseState): Either[String, js.Dictionary[js.Any]] =
+    ps.json match
+      case o: js.Object => Right(o.asInstanceOf[js.Dictionary[js.Any]])
+      case _ => ps.left("js.Object")
+
+  private def jsToCollection[A, C[_, _]](
+    ps: ParseState,
+    dict: js.Dictionary[js.Any],
+    resBuilder: Builder[(String, A), C[String, A]]
+  )(using nc: NativeConverter[A]): Either[String, C[String, A]] =
+    resBuilder.sizeHint(dict.size)
+    val it = dict.iterator
+
+    while it.hasNext do
+      val (k, v) = it.next()
+
+      val key: String = k.asInstanceOf[Any] match
+        case s: String => s
+        case _ => return ps.left("all String keys")
+
+      val value: A = nc.fromNativeE(ps.atKey(key, v)) match
+        case Right(a) => a
+        case l: Left[?, ?] => return l.asInstanceOf[Left[String, C[String, A]]]
+
+      resBuilder.addOne((key, value))
+
+    Right(resBuilder.result())
+
+  given MapConv[A: NativeConverter]: NativeConverter[Map[String, A]] with
     extension (m: Map[String, A]) def toNative: js.Any =
       val res = js.Object().asInstanceOf[js.Dynamic]
       for (k, v) <- m do
         res.updateDynamic(k)(v.toNative)
       res
-    def fromNative(nativeJs: js.Any): Map[String, A] =
-      val dict = nativeJs.asInstanceOf[js.Dictionary[js.Any]]
-      val res = HashMap[String, A]()
-      for (k, v) <- dict do
-        res(k) = nc.fromNative(v)
-      res
 
-  given immutableMapConv[A](using nc: NativeConverter[A]): NativeConverter[immutable.Map[String, A]] with
+    def fromNativeE(ps: ParseState): Either[String, Map[String, A]] =
+      for
+        jsDict <- asJSDict(ps)
+        m <- jsToCollection(ps, jsDict, HashMap.newBuilder)
+      yield m
+
+  given ImmutableMapConv[A: NativeConverter]: NativeConverter[immutable.Map[String, A]] with
     extension (m: immutable.Map[String, A]) def toNative: js.Any =
       val res = js.Object().asInstanceOf[js.Dynamic]
       for (k, v) <- m do
         res.updateDynamic(k)(v.toNative)
       res
-    def fromNative(nativeJs: js.Any): immutable.Map[String, A] =
-      val dict = nativeJs.asInstanceOf[js.Dictionary[js.Any]]
-      var res = immutable.HashMap[String, A]()
-      for (k, v) <- dict do
-        res = res.updated(k, nc.fromNative(v))
-      res
 
-  given optionConv[A](using nc: NativeConverter[A]): NativeConverter[Option[A]] with
+    def fromNativeE(ps: ParseState): Either[String, Predef.Map[String, A]] =
+      for
+        jsDict <- asJSDict(ps)
+        m <- jsToCollection(ps, jsDict, immutable.Map.newBuilder)
+      yield m
+
+  given OptionCodec[A: NativeConverter]: NativeConverter[Option[A]] with
     extension (o: Option[A]) def toNative: js.Any =
       o.map(_.toNative).getOrElse(null.asInstanceOf[js.Any])
-    def fromNative(nativeJs: js.Any): Option[A] =
-      Option(nativeJs).map(nc.fromNative)
+
+    def fromNativeE(ps: ParseState): Either[String, Option[A]] =
+      ps.json match
+        case null => Right(None)
+        case _ => NativeConverter[A].fromNativeE(ps).map(Some(_))
 
   /**
    * Derive a NativeConverter for type T. This method is called by the compiler automatically
@@ -374,31 +461,73 @@ object NativeConverter:
    * <br>
    * Only Sum and Product types are supported
    */
-  inline given derived[T](using m: Mirror.Of[T]): NativeConverter[T] = inline m match
-    case s: Mirror.SumOf[T] => sumConverter[T, s.MirroredElemTypes](s)
+  inline given derived[A](using m: Mirror.Of[A]): NativeConverter[A] =
+    type Mets = m.MirroredElemTypes
+    type Mels = m.MirroredElemLabels
+    type Label = m.MirroredLabel
 
-    case p: Mirror.ProductOf[T] => new NativeConverter[T]:
-      extension (t: T) def toNative: js.Any =
-        productToNative[T](p, t.asInstanceOf[Product])
+    inline m match
+      case p: Mirror.ProductOf[A] =>
+        new NativeConverter[A]:
+          extension (a: A) def toNative: js.Any =
+            productToNative[Mets, Mels](a.asInstanceOf[Product])
+          def fromNativeE(ps: ParseState): Either[String, A] =
+            for
+              jsDict <- asJSDict(ps)
+              resArr = Array.ofDim[Any](constValue[Tuple.Size[Mets]])
+              a <- nativeToProduct[A, Mets, Mels](p, resArr, ps, jsDict)
+            yield a
 
-      def fromNative(nativeJs: js.Any): T =
-        nativeToProduct[T](p, nativeJs)
+      case s: Mirror.SumOf[A] => sumConverter[A, Mets](s)
 
-  /**
-   * If every element of the Sum type is a Singleton, then
-   * serialize using the type name. Otherwise, it is an ADT
-   * that is serialized the normal way, by summoning NativeConverters
-   * for the elements and adding a `@type` property providing the
-   * (short) class name.
-   */
-  private inline def sumConverter[T, Mets <: Tuple](m: Mirror.SumOf[T]): NativeConverter[T] =
+  private inline def productToNative[Mets, Mels](
+    p: Product,
+    i: Int = 0,
+    res: js.Dynamic = js.Object().asInstanceOf[js.Dynamic]
+  ): js.Any =
+    inline (erasedValue[Mets], erasedValue[Mels]) match
+      // base case
+      case _: (EmptyTuple, EmptyTuple) => res
+
+      case _: (ImplicitlyJsAny *: metsTail, mel *: melsTail) =>
+        res.updateDynamic(constValue[mel & String])(p.productElement(i).asInstanceOf[js.Any])
+        productToNative[metsTail, melsTail](p, i + 1, res)
+
+      case _: (met *: metsTail, mel *: melsTail) =>
+        val nc = summonInline[NativeConverter[met]]
+        val nativeElem = nc.toNative(p.productElement(i).asInstanceOf[met])
+        res.updateDynamic(constValue[mel & String])(nativeElem)
+        productToNative[metsTail, melsTail](p, i + 1, res)
+
+  private inline def nativeToProduct[A, Mets, Mels](
+    mirror: Mirror.ProductOf[A],
+    resArr: Array[Any],
+    ps: ParseState,
+    jsDict: js.Dictionary[js.Any],
+    i: Int = 0
+  ): Either[String, A] =
+    inline (erasedValue[Mets], erasedValue[Mels]) match
+      case _: (EmptyTuple, EmptyTuple) =>
+        Right(mirror.fromProduct(ArrayProduct(resArr)))
+
+      case _: (met *: metsTail, mel *: melsTail) =>
+        val nc = summonInline[NativeConverter[met]]
+        val key = constValue[mel & String]
+        val elementJs = jsDict(key)
+        val elementEither = nc.fromNativeE(ps.atKey(key, elementJs))
+        elementEither match
+          case l: Left[?, ?] => l.asInstanceOf[Left[String, A]]
+          case Right(v) =>
+            resArr(i) = v
+            nativeToProduct[A, metsTail, melsTail](mirror, resArr, ps, jsDict, i + 1)
+
+  private inline def sumConverter[A, Mets](m: Mirror.SumOf[A]): NativeConverter[A] =
     inline erasedValue[Mets] match
       case _: (met *: metsTail) =>
-        inline if isSingleton[met] then sumConverter[T, metsTail](m)
-        else buildAdtSumConverter[T](m)
+        inline if isSingleton[met] then sumConverter[A, metsTail](m)
+        else adtSumConverter(m)
 
-      // all of the elements were Singletons.. build simple enum case
-      case _: EmptyTuple => simpleSumConverter[T](m)
+      case _: EmptyTuple => simpleSumConverter(m)
 
   /**
    * A singleton is a Product with no parameter elements
@@ -411,146 +540,81 @@ object NativeConverter:
     case _ => false
   }
 
-  private inline def simpleSumConverter[T](m: Mirror.SumOf[T]): NativeConverter[T] =
-    new NativeConverter[T]:
-      extension (t: T) def toNative: js.Any =
-        simpleSumToNative[m.MirroredElemLabels](m.ordinal(t))
+  private inline def simpleSumConverter[A](m: Mirror.SumOf[A]): NativeConverter[A] =
+    type Mets = m.MirroredElemTypes
+    type Mels = m.MirroredElemLabels
+    type Label = m.MirroredLabel
 
-      def fromNative(nativeJs: js.Any): T =
-        simpleSumFromNative[T, m.MirroredLabel, m.MirroredElemTypes, m.MirroredElemLabels](
-          nativeJs.asInstanceOf[String])
+    new NativeConverter[A]:
+      extension (a: A) def toNative: js.Any = simpleSumToNative[Mels](m.ordinal(a))
+      def fromNativeE(ps: ParseState): Either[String, A] =
+        for
+          name <-
+            ps.json.asInstanceOf[Any] match
+              case s: String => Right(s)
+              case _ => ps.left("String")
+          a <- simpleSumFromNative[A, Label, Mets, Mels](ps, name)
+        yield a
 
-  /**
-   * This generates an if-else chain that returns the String type name for a given ordinal.
-   */
-  private inline def simpleSumToNative[Mels <: Tuple](n: Int, i: Int = 0): js.Any =
+  private inline def simpleSumToNative[Mels](n: Int, i: Int = 0): js.Any =
     inline erasedValue[Mels] match
       case _: EmptyTuple => // can never reach
       case _: (mel *: melsTail) =>
-        if i == n then constString[mel]
+        if i == n then constValue[mel].asInstanceOf[js.Any]
         else simpleSumToNative[melsTail](n, i + 1)
 
-  /**
-   * This generates an if-else chain that compares the deserialized String to the element type names.
-   * The Mirror.ProductOf::fromProduct returns the 1 instance of that Singleton, so there's no need
-   * to summon[NativeConverter[met]] in the simple case.
-   */
-  private inline def simpleSumFromNative[T, Label, Mets <: Tuple, Mels <: Tuple](name: String): T =
+  private inline def simpleSumFromNative[A, Label, Mets, Mels](
+    ps: ParseState,
+    name: String
+  ): Either[String, A] =
     inline (erasedValue[Mets], erasedValue[Mels]) match
       case _: (EmptyTuple, EmptyTuple) =>
-        throw IllegalArgumentException("Sum type " + constString[Label] + " does not have element " + name)
-      case _: ((met *: metsTail), (mel *: melsTail)) =>
-        if constString[mel] == name then
-          summonInline[Mirror.ProductOf[met & T]].fromProduct(EmptyTuple)
-        else simpleSumFromNative[T, Label, metsTail, melsTail](name)
+        ps.left(s"a member of Sum type ${constValue[Label]}")
+      case _: (met *: metsTail, mel *: melsTail) =>
+        if constValue[mel] == name then
+          Right(summonInline[Mirror.ProductOf[met & A]].fromProduct(EmptyTuple))
+        else
+          simpleSumFromNative[A, Label, metsTail, melsTail](ps, name)
 
-  /**
-   * Uses a `@type` property that holds the (short) class name. todo: make configurable
-   */
-  private inline def buildAdtSumConverter[T](m: Mirror.SumOf[T]): NativeConverter[T] =
-    new NativeConverter[T]:
-      extension (t: T) def toNative: js.Any =
-        adtSumToNative[T, m.MirroredElemTypes, m.MirroredElemLabels](t, m.ordinal(t))
+  private inline def adtSumConverter[A](m: Mirror.SumOf[A]): NativeConverter[A] =
+    type Mets = m.MirroredElemTypes
+    type Mels = m.MirroredElemLabels
+    type Label = m.MirroredLabel
 
-      def fromNative(nativeJs: js.Any): T =
-        if !nativeJs.asInstanceOf[js.Object].hasOwnProperty("@type") then
-          throw IllegalArgumentException("Missing required @type property: " + JSON.stringify(nativeJs))
-        val typeName = nativeJs.asInstanceOf[js.Dynamic].`@type`.asInstanceOf[String]
-        adtSumFromNative[T, m.MirroredLabel, m.MirroredElemTypes, m.MirroredElemLabels](typeName, nativeJs)
+    new NativeConverter[A]:
+      extension (a: A) def toNative: js.Any = adtSumToNative[A, Mets, Mels](a, m.ordinal(a))
+      def fromNativeE(ps: ParseState): Either[String, A] =
+        for
+          jsDict <- asJSDict(ps)
+          typeName <-
+            jsDict("@type").asInstanceOf[Any] match
+              case s: String => Right(s)
+              case _ => ps.left("js.Object with existing '@type' key/value")
+          a <- adtSumFromNative[A, Label, Mets, Mels](ps, typeName)
+        yield a
 
-  /**
-   * If the Sum type has any element that is not Singleton, we summon the NativeConverters
-   * for the elements we want to convert.
-   */
-  private inline def adtSumToNative[T, Mets <: Tuple, Mels <: Tuple](t: T, ordinal: Int, i: Int = 0): js.Any =
+
+  private inline def adtSumToNative[A, Mets, Mels](a: A, ordinal: Int, i: Int = 0): js.Any =
     inline (erasedValue[Mets], erasedValue[Mels]) match
       case _: (EmptyTuple, EmptyTuple) => // can never reach
-      case _: ((met *: metsTail), (mel *: melsTail)) =>
+      case _: (met *: metsTail, mel *: melsTail) =>
         if i == ordinal then
-          val res = summonInline[NativeConverter[met]].asInstanceOf[NativeConverter[T]].toNative(t)
-          res.asInstanceOf[js.Dynamic].`@type` = constString[mel]
+          val res = summonInline[NativeConverter[met]].asInstanceOf[NativeConverter[A]].toNative(a)
+          res.asInstanceOf[js.Dynamic].`@type` = constValue[mel].asInstanceOf[js.Any]
           res
-        else adtSumToNative[T, metsTail, melsTail](t, ordinal, i + 1)
-
-  private inline def adtSumFromNative[T, Label, Mets <: Tuple, Mels <: Tuple](
-    typeName: String,
-    nativeJs: js.Any
-  ): T =
-    inline (erasedValue[Mets], erasedValue[Mels]) match
-      case _: (EmptyTuple, EmptyTuple) => throw IllegalArgumentException(
-        "Cannot decode " + constString[Label] + " with " + JSON.stringify(nativeJs))
-      case _: ((met *: metsTail), (mel *: melsTail)) =>
-        if constString[mel] == typeName then
-          summonInline[NativeConverter[met]].asInstanceOf[NativeConverter[T]].fromNative(nativeJs)
         else
-          adtSumFromNative[T, Label, metsTail, melsTail](typeName, nativeJs)
+          adtSumToNative[A, metsTail, melsTail](a, ordinal, i + 1)
 
-  /**
-   * Makes a JS Object with a property for every Scala field.
-   */
-  private inline def productToNative[T](m: Mirror.ProductOf[T], p: Product): js.Any =
-    buildProductToNative[m.MirroredElemTypes, m.MirroredElemLabels](p)
-
-  private inline def buildProductToNative[Mets <: Tuple, Mels <: Tuple](
-    p: Product,
-    i: Int = 0,
-    res: js.Dynamic = js.Object().asInstanceOf[js.Dynamic]
-  ): js.Any =
+  private inline def adtSumFromNative[A, Label, Mets, Mels](
+    ps: ParseState,
+    typeName: String
+  ): Either[String, A] =
     inline (erasedValue[Mets], erasedValue[Mels]) match
-      // base case.. return res
-      case _: (EmptyTuple, EmptyTuple) => res
-
-      // Manually inline the common cases to avoid any instanceof checks.
-      case _: ((ImplicitlyJsAny *: metsTail), (mel *: melsTail)) =>
-        res.updateDynamic(constString[mel])(p.productElement(i).asInstanceOf[js.Any])
-        buildProductToNative[metsTail, melsTail](p, i + 1, res)
-
-      // try to summon a NativeConverter for the MirroredElemType
-      case _: ((met *: metsTail), (mel *: melsTail)) =>
-        val converter = summonInline[NativeConverter[met]]
-        res.updateDynamic(constString[mel])(converter.toNative(p.productElement(i).asInstanceOf[met]))
-        buildProductToNative[metsTail, melsTail](p, i + 1, res)
-
-  /**
-   * Builds a Scala product of type T from the JS Object properties.
-   */
-  private inline def nativeToProduct[T](m: Mirror.ProductOf[T], nativeJs: js.Any): T =
-    buildNativeProduct[T, m.MirroredElemTypes, m.MirroredElemLabels](
-      m, nativeJs.asInstanceOf[js.Dynamic], Array.ofDim(sizeOf[m.MirroredElemTypes]))
-
-  private inline def buildNativeProduct[T, Mets <: Tuple, Mels <: Tuple](
-    mirror: Mirror.ProductOf[T],
-    nativeJs: js.Dynamic,
-    resArr: Array[Any],
-    i: Int = 0
-  ): T = {
-    inline (erasedValue[Mets], erasedValue[Mels]) match
-      // base case, return new instance
       case _: (EmptyTuple, EmptyTuple) =>
-        mirror.fromProduct(ArrayProduct(resArr))
+        ps.left(s"a valid '@type' for ${constValue[Label]}")
+      case _: (met *: metsTail, mel *: melsTail) =>
+        if constValue[mel] == typeName then
+          summonInline[NativeConverter[met]].asInstanceOf[NativeConverter[A]].fromNativeE(ps)
+        else
+          adtSumFromNative[A, Label, metsTail, melsTail](ps, typeName)
 
-      // Manually inline the common cases to avoid any instanceof checks.
-      case _: ((ImplicitlyJsAny *: metsTail), (mel *: melsTail)) =>
-        resArr(i) = nativeJs.selectDynamic(constString[mel]).asInstanceOf[Any]
-        buildNativeProduct[T, metsTail, melsTail](mirror, nativeJs, resArr, i + 1)
-
-      // try to summon a NativeConverter for the MirroredElemType
-      case _: ((met *: metsTail), (mel *: melsTail)) =>
-        val converter = summonInline[NativeConverter[met]]
-        val convertedProp: met = converter.fromNative(nativeJs.selectDynamic(constString[mel]))
-        resArr(i) = convertedProp.asInstanceOf[Any]
-        buildNativeProduct[T, metsTail, melsTail](mirror, nativeJs, resArr, i + 1)
-  }
-
-  /**
-   * MirroredElemLabels and MirroredLabels are always Tuples of String.
-   * However, the tuples themseves don't have types.. so we just call .toString
-   * after materializing the constant value.
-   *
-   * I can confirm that the toString call is eliminated at compile time by inspecting
-   * the compiled JS.
-   */
-  private inline def constString[T]: String = constValue[T & String]
-
-
-  private inline def sizeOf[T <: Tuple]: Int = constValue[Tuple.Size[T]]
