@@ -4,10 +4,8 @@ lazy val root = crossProject(JVMPlatform, JSPlatform)
   .platformsEnablePlugins(JSPlatform)(ScalaJSJUnitPlugin)
   .settings(
     organization := "org.getshaka",
-    sonatypeProfileName := organization.value,
     name := "native-converter",
     versionScheme := Some("early-semver"),
-
     scalaVersion := "3.1.0",
 
     // publishing settings
@@ -21,7 +19,9 @@ lazy val root = crossProject(JVMPlatform, JSPlatform)
         url = url("https://augustnagro.com")
       )
     ),
+
     Test / publishArtifact := false,
+    sonatypeProfileName := organization.value,
     sonatypeCredentialHost := "s01.oss.sonatype.org",
   )
   .jvmSettings(
