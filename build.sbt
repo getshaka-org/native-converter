@@ -1,5 +1,3 @@
-val customScalaJSVersion = Option(System.getenv("SCALAJS_VERSION"))
-
 lazy val root = crossProject(JVMPlatform, JSPlatform)
   .crossType(CrossType.Full)
   .in(file("."))
@@ -28,6 +26,5 @@ lazy val root = crossProject(JVMPlatform, JSPlatform)
   .jvmSettings(
     libraryDependencies ++= Seq(
       "com.novocode" % "junit-interface" % "0.11" % "test"
-    ),
-    publish / skip := customScalaJSVersion.isDefined
+    )
   )
