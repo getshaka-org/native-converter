@@ -24,7 +24,8 @@ inThisBuild(
 
     publish / skip := true,
     Test / publishArtifact := false,
-    sonatypeCredentialHost := "s01.oss.sonatype.org"
+    sonatypeCredentialHost := "s01.oss.sonatype.org",
+    sonatypeProfileName := "augustnagro@gmail.com"
   )
 )
 
