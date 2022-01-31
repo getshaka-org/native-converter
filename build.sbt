@@ -1,8 +1,6 @@
 inThisBuild(
   List(
     organization := "org.getshaka",
-    name := "native-converter",
-    version := "0.6.8",
     versionScheme := Some("early-semver"),
 
     scalaVersion := "3.1.0",
@@ -26,7 +24,7 @@ inThisBuild(
 
     publish / skip := true,
     Test / publishArtifact := false,
-    sonatypeCredentialHost := "s01.oss.sonatype.org",
+    sonatypeCredentialHost := "s01.oss.sonatype.org"
   )
 )
 
@@ -34,12 +32,12 @@ lazy val root = crossProject(JVMPlatform, JSPlatform)
   .crossType(CrossType.Full)
   .in(file("."))
   .platformsEnablePlugins(JSPlatform)(ScalaJSJUnitPlugin)
+  .settings(
+    name := "native-converter",
+    publish / skip := false
+  )
   .jvmSettings(
-    publish / skip := false,
     libraryDependencies ++= Seq(
       "com.novocode" % "junit-interface" % "0.11" % "test"
     )
-  )
-  .jsSettings(
-    publish / skip := false,
   )
