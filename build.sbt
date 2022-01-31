@@ -20,12 +20,16 @@ lazy val root = crossProject(JVMPlatform, JSPlatform)
       )
     ),
 
+    publish / skip := true,
     Test / publishArtifact := false,
-    sonatypeProfileName := organization.value,
     sonatypeCredentialHost := "s01.oss.sonatype.org",
   )
   .jvmSettings(
+    publish / skip := false,
     libraryDependencies ++= Seq(
       "com.novocode" % "junit-interface" % "0.11" % "test"
     )
+  )
+  .jsSettings(
+    publish / skip := false
   )

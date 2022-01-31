@@ -2,7 +2,7 @@
 name: CI
 on:
   push:
-    branches: [master, main]
+    branches: [master]
   pull_request:
 jobs:
   test:
@@ -11,12 +11,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        java: [adopt@1.8, adopt@1.11]
+        java: [openjdk@1.8, openjdk@1.17]
         command:
           - "test"
     steps:
       - uses: actions/checkout@v2
-      - uses: olafurpg/setup-scala@v10
+      - uses: olafurpg/setup-scala@v13
         with:
           java-version: ${{ matrix.java }}
       - run: sbt ${{ matrix.command }}
