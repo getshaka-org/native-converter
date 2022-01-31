@@ -1,3 +1,5 @@
+ThisBuild / publish / skip := true
+
 lazy val root = crossProject(JVMPlatform, JSPlatform)
   .crossType(CrossType.Full)
   .in(file("."))
@@ -5,12 +7,19 @@ lazy val root = crossProject(JVMPlatform, JSPlatform)
   .settings(
     organization := "org.getshaka",
     name := "native-converter",
+    version := "0.6.8",
     versionScheme := Some("early-semver"),
+
     scalaVersion := "3.1.0",
 
     // publishing settings
     homepage := Some(url("https://github.com/getshaka-org/native-converter")),
     licenses += ("Apache-2.0", url("https://opensource.org/licenses/Apache-2.0")),
+    scmInfo := Some(ScmInfo(
+      url("https://github.com/getshaka-org/native-converter"),
+      "scm:git:git@github.com:getshaka-org/native-converter.git",
+      Some("scm:git:git@github.com:getshaka-org/native-converter.git")
+    )),
     developers := List(
       Developer(
         id = "augustnagro@gmail.com",
@@ -21,9 +30,17 @@ lazy val root = crossProject(JVMPlatform, JSPlatform)
     ),
 
     publish / skip := true,
+    publishMavenStyle := true,
     Test / publishArtifact := false,
-    sonatypeCredentialHost := "s01.oss.sonatype.org",
-    sonatypeProfileName := "org.getshaka"
+    pomIncludeRepository := { _ => false },
+    publishTo := {
+      val nexus = "https://s01.oss.sonatype.org/"
+      if (isSnapshot.value)
+        Some("snapshots" at nexus + "content/repositories/snapshots")
+      else
+        Some("releases" at nexus + "service/local/staging/deploy/maven2")
+    },
+    credentials += Credentials(Path.userHome / ".sbt" / ".credentials")
   )
   .jvmSettings(
     publish / skip := false,
@@ -32,5 +49,5 @@ lazy val root = crossProject(JVMPlatform, JSPlatform)
     )
   )
   .jsSettings(
-    publish / skip := false
+    publish / skip := false,
   )
