@@ -1,11 +1,9 @@
-lazy val root = crossProject(JVMPlatform, JSPlatform)
-  .crossType(CrossType.Full)
-  .in(file("."))
-  .platformsEnablePlugins(JSPlatform)(ScalaJSJUnitPlugin)
-  .settings(
+inThisBuild(
+  List(
     organization := "org.getshaka",
     name := "native-converter",
     versionScheme := Some("early-semver"),
+
     scalaVersion := "3.1.0",
 
     // publishing settings
@@ -23,8 +21,13 @@ lazy val root = crossProject(JVMPlatform, JSPlatform)
     publish / skip := true,
     Test / publishArtifact := false,
     sonatypeCredentialHost := "s01.oss.sonatype.org",
-    sonatypeProfileName := "org.getshaka"
   )
+)
+
+lazy val root = crossProject(JVMPlatform, JSPlatform)
+  .crossType(CrossType.Full)
+  .in(file("."))
+  .platformsEnablePlugins(JSPlatform)(ScalaJSJUnitPlugin)
   .jvmSettings(
     publish / skip := false,
     libraryDependencies ++= Seq(
