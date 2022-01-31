@@ -1,6 +1,13 @@
-inThisBuild(
-  List(
+ThisBuild / publish / skip := true
+
+lazy val root = crossProject(JVMPlatform, JSPlatform)
+  .crossType(CrossType.Full)
+  .in(file("."))
+  .platformsEnablePlugins(JSPlatform)(ScalaJSJUnitPlugin)
+  .settings(
     organization := "org.getshaka",
+    name := "native-converter",
+    version := "0.7.0",
     versionScheme := Some("early-semver"),
 
     scalaVersion := "3.1.0",
@@ -22,20 +29,18 @@ inThisBuild(
       )
     ),
 
-    publish / skip := true,
+    publish / skip := false,
     Test / publishArtifact := false,
-    sonatypeCredentialHost := "s01.oss.sonatype.org",
-    sonatypeProfileName := "augustnagro@gmail.com"
-  )
-)
-
-lazy val root = crossProject(JVMPlatform, JSPlatform)
-  .crossType(CrossType.Full)
-  .in(file("."))
-  .platformsEnablePlugins(JSPlatform)(ScalaJSJUnitPlugin)
-  .settings(
-    name := "native-converter",
-    publish / skip := false
+    publishMavenStyle := true,
+    pomIncludeRepository := { _ => false },
+    publishTo := {
+      val nexus = "https://s01.oss.sonatype.org/"
+      if (isSnapshot.value)
+        Some("snapshots" at nexus + "content/repositories/snapshots")
+      else
+        Some("releases" at nexus + "service/local/staging/deploy/maven2")
+    },
+    credentials += Credentials(Path.userHome / ".sbt" / ".credentials")
   )
   .jvmSettings(
     libraryDependencies ++= Seq(
