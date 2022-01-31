@@ -23,6 +23,7 @@ lazy val root = crossProject(JVMPlatform, JSPlatform)
     publish / skip := true,
     Test / publishArtifact := false,
     sonatypeCredentialHost := "s01.oss.sonatype.org",
+    sonatypeProfileName := "org.getshaka"
   )
   .jvmSettings(
     publish / skip := false,
