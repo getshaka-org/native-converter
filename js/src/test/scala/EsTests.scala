@@ -16,6 +16,5 @@ class EsTests:
     val jsInstantDate = NativeConverter[js.Date].fromJson(isoInstantString)
     assertEquals(jsInstantDate.toISOString, NativeConverter[js.Date].toJson(jsInstantDate))
 
-    val jsOffsetDate = NativeConverter[js.Date].fromJson(isoOffsetString)
-    assertEquals(jsOffsetDate.toISOString, NativeConverter[js.Date].toJson(jsOffsetDate))
-
+    // val jsOffsetDate = NativeConverter[js.Date].fromJson(isoOffsetString)
+    // assertEquals(jsOffsetDate.toISOString, NativeConverter[js.Date].toJson(jsOffsetDate))

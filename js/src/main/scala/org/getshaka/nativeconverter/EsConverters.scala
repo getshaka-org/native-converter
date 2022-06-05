@@ -5,31 +5,27 @@ import scala.collection.Map
 import scala.collection.mutable.HashMap
 import scala.scalajs.js.{JSON, WrappedMap}
 
-/**
- * Converters for native JS types not supported by JSON.
- */
+/** Converters for native JS types not supported by JSON.
+  */
 object EsConverters:
-  
-  given ESMapConv[K: NativeConverter, V: NativeConverter]: NativeConverter[Map[K, V]] with
-    extension (t: Map[K, V]) def toNative: js.Any =
-      val res = js.Map[js.Any, js.Any]()
-      for (k, v) <- t do
-        res(k.toNative) = v.toNative
-      res
 
-    def fromNativeE(ps: ParseState): Either[String, Map[K, V]] =
-      for
-        jsMap <-
-          ps.json match
-            case m: js.Map[?, ?] => Right(m.asInstanceOf[js.Map[js.Any, js.Any]])
-            case _ => ps.left("js.Map")
-        m <- jsMapToMap[K, V](ps, jsMap)
-      yield m
+  given ESMapConv[K: NativeConverter, V: NativeConverter]: NativeConverter[Map[K, V]] with
+    extension (t: Map[K, V])
+      def toNative: js.Any =
+        val res = js.Map[js.Any, js.Any]()
+        for (k, v) <- t do res(k.toNative) = v.toNative
+        res
+
+    def fromNative(ps: ParseState): Map[K, V] =
+      val jsMap = ps.json match
+        case m: js.Map[?, ?] => m.asInstanceOf[js.Map[js.Any, js.Any]]
+        case _               => ps.fail("js.Map")
+      jsMapToMap[K, V](ps, jsMap)
 
   private def jsMapToMap[K: NativeConverter, V: NativeConverter](
-    ps: ParseState,
-    jsMap: js.Map[js.Any, js.Any]
-  ): Either[String, Map[K, V]] =
+      ps: ParseState,
+      jsMap: js.Map[js.Any, js.Any]
+  ): Map[K, V] =
     val res = HashMap.empty[K, V]
     res.sizeHint(jsMap.size)
     val it = jsMap.iterator
@@ -38,18 +34,10 @@ object EsConverters:
       val (k, v) = it.next()
       val kString = JSON.stringify(k)
 
-      val key: K = NativeConverter[K].fromNativeE(ps.atKey(kString, k)) match
-        case Right(x) => x
-        case l: Left[?, ?] => return l.asInstanceOf[Left[String, Map[K, V]]]
-
-      val value: V = NativeConverter[V].fromNativeE(ps.atKey(kString, v)) match
-        case Right(x) => x
-        case l: Left[?, ?] => return l.asInstanceOf[Left[String, Map[K, V]]]
-
+      val key: K = NativeConverter[K].fromNative(ps.atKey(kString, k))
+      val value: V = NativeConverter[V].fromNative(ps.atKey(kString, v))
       res(key) = value
-    Right(res)
 
+    res
 
 // todo more
-
-  

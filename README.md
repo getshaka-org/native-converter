@@ -2,7 +2,7 @@ A [Scala.js](https://www.scala-js.org/) project that makes it easy to convert to
 
 ```Scala
 import scala.scalajs.js
-import org.getshaka.nativeconverter.{NativeConverter, fromJson, fromNative}
+import org.getshaka.nativeconverter.NativeConverter, fromJson, fromNative}
 
 case class User(name: String, isAdmin: Boolean, age: Int) derives NativeConverter
 val u = User("John Smith", true, 42)
@@ -25,7 +25,6 @@ The primary goals are:
 * [Installing](#installing)
 * [ScalaDoc](#scaladoc)
 * [Built-In NativeConverters](#built-in-nativeconverters)
-* [Either vs Exceptions](#either-instead-of-exceptions)
 * [Typeclass Derivation](#typeclass-derivation)
 * [Cross Building](#cross-building)
 * [Performance](#performance)
@@ -37,7 +36,7 @@ This library requires Scala >= 3.1.0. After [setting up a Scala.js project with 
 
 In `/project/plugins.sbt` add the latest sbt-dotty and Scala.js plugin:
 ```Scala
-addSbtPlugin("org.scala-js" % "sbt-scalajs" % "1.7.1")
+addSbtPlugin("org.scala-js" % "sbt-scalajs" % "1.10.0")
 ```
 
 Then in `/build.sbt`, set the scala version and add the native-converter dependency:
@@ -69,15 +68,6 @@ val s: String = NativeConverter[String]
   .fromJson(""" "hello world" """)
 ```
 
-### Either instead of Exceptions
-
-If `fromNative` or `fromJson` fail, a RuntimeException is thrown with a helpful error message. If you prefer `Either` instead, use the `fromNativeE` and `fromJsonE` methods.
-
-```scala
-// Left(helpfulErrorMessage)
-val e: Either[String, Int] = NativeConverter[Int].fromJsonE(""" "abc" """)
-```
-
 ### Char, Long, and Overriding the Defaults
 
 Char and Long are always converted to String, since they cannot be represented directly in JavaScript:
@@ -94,16 +84,17 @@ val parsedLong = NativeConverter[Long]
 If you want to change this behavior for Long, implement a `given` instance of NativeConverter[Long]. The example below uses String for conversion only when the Long is bigger than Int.
 
 ```Scala
-  given LongConv: NativeConverter[Long] with
-    extension (l: Long) def toNative: js.Any =
-      if l > Int.MaxValue || l < Int.MinValue then l.toString
-      else l.toInt.asInstanceOf[js.Any]
+  given NativeConverter[Long] with
+    extension (t: Long)
+      def toNative: js.Any =
+        if t > Int.MaxValue || t < Int.MinValue then t.toString
+        else t.toInt.asInstanceOf[js.Any]
 
-    def fromNativeE(ps: ParseState): Either[String, Long] =
+    def fromNative(ps: ParseState): Long =
       ps.json.asInstanceOf[Any] match
-        case i: Int => Right(i)
-        case s: String => s.toLongOption.toRight(ps.left("Long").value)
-        case _ => ps.left("Long")
+        case i: Int    => i
+        case s: String => s.toLongOption.getOrElse(ps.fail("Long in a String"))
+        case _         => ps.fail("Long")
 
 // "123"
 val smallLong: String = NativeConverter[Long].toJson(123L)
@@ -112,7 +103,7 @@ val smallLong: String = NativeConverter[Long].toJson(123L)
 val bigLong: String = NativeConverter[Long].toJson(Long.MaxValue)
 ```
 
-Note that we must implement `fromNativeE(ps: ParseState)`. The ParseState is used to build helpful error messages.
+Note that we must implement `fromNative(ps: ParseState)`. The ParseState is used to build helpful error messages.
 
 ### Functions
 

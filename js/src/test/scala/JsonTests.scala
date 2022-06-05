@@ -40,8 +40,7 @@ class JsonTests:
     try
       Int.MaxValue.toString.fromJson[Short]
       fail("Should not be able to make Short from large Int")
-    catch
-      case _ => ()
+    catch case _ => ()
 
     assertEquals("1.1", JSON.stringify(1.1.toFloat.toNative).substring(0, 3))
     assertEquals(1.1.toFloat, NativeConverter[Float].fromNative(JSON.parse("1.1")), .0001)
@@ -60,15 +59,16 @@ class JsonTests:
   @Test
   def jsonOverrideGivenTest: Unit =
     given NativeConverter[Long] with
-      extension (t: Long) def toNative: js.Any =
-        if t > Int.MaxValue || t < Int.MinValue then t.toString
-        else t.toInt.asInstanceOf[js.Any]
+      extension (t: Long)
+        def toNative: js.Any =
+          if t > Int.MaxValue || t < Int.MinValue then t.toString
+          else t.toInt.asInstanceOf[js.Any]
 
-      def fromNativeE(ps: ParseState): Either[String, Long] =
+      def fromNative(ps: ParseState): Long =
         ps.json.asInstanceOf[Any] match
-          case i: Int => Right(i)
-          case s: String => s.toLongOption.toRight(ps.left("Long in a String").value)
-          case _ => ps.left("Long")
+          case i: Int    => i
+          case s: String => s.toLongOption.getOrElse(ps.fail("Long in a String"))
+          case _         => ps.fail("Long")
 
     val bigLongStr = s""" "${Long.MaxValue}" """.trim
     assertEquals(Long.MaxValue, bigLongStr.fromJson[Long])
@@ -78,12 +78,12 @@ class JsonTests:
     assertEquals("123", 123L.toJson)
 
   case class SimpleProduct(
-    a: String,
-    b: Boolean,
-    c: Byte,
-    d: Int,
-    e: Double,
-    f: Long
+      a: String,
+      b: Boolean,
+      c: Byte,
+      d: Int,
+      e: Double,
+      f: Long
   ) derives NativeConverter
 
   case object CaseObject
@@ -131,9 +131,9 @@ class JsonTests:
     case Adams, Washington, Jefferson
 
   enum Color(val rgb: Int) derives NativeConverter:
-    case Red extends Color(0xFF0000)
-    case Green extends Color(0x00FF00)
-    case Blue extends Color(0x0000FF)
+    case Red extends Color(0xff0000)
+    case Green extends Color(0x00ff00)
+    case Blue extends Color(0x0000ff)
 
   enum Opt[+T] derives NativeConverter:
     case Sm(x: T)
@@ -149,7 +149,7 @@ class JsonTests:
     assertEquals(Founder.Washington, """ "Washington" """.fromJson[Founder])
 
     assertEquals(""" "Blue" """.trim, JSON.stringify(Color.Blue.toNative))
-    assertEquals(0x00FF00, """ "Green" """.fromJson[Color].rgb)
+    assertEquals(0x00ff00, """ "Green" """.fromJson[Color].rgb)
 
     assertEquals(""" {"@type":"Nn"} """.trim, JSON.stringify(Opt.Nn.toNative))
     try
@@ -181,29 +181,29 @@ class JsonTests:
     val strArr = "[1,2,3]"
     val nativeArr = JSON.parse(strArr)
 
-    val a = Array(1,2,3)
+    val a = Array(1, 2, 3)
     assertEquals(strArr, JSON.stringify(a.toNative))
     assertTrue(a sameElements NativeConverter[Array[Int]].fromNative(nativeArr))
 
-    val b = Iterable(1,2,3)
+    val b = Iterable(1, 2, 3)
     assertEquals(strArr, JSON.stringify(b.toNative))
     assertTrue(b.iterator sameElements NativeConverter[Iterable[Int]].fromNative(nativeArr))
 
-    val c = Seq(1,2,3)
+    val c = Seq(1, 2, 3)
     assertEquals(strArr, JSON.stringify(NativeConverter[Seq[Int]].toNative(c)))
     // this is not inferring the right NativeConverter...
 //    assertEquals(strArr, JSON.stringify(c.toNative))
     assertTrue(c sameElements NativeConverter[Seq[Int]].fromNative(nativeArr))
 
-    val ci = immutable.Seq(1,2,3)
+    val ci = immutable.Seq(1, 2, 3)
     assertEquals(strArr, JSON.stringify(NativeConverter[immutable.Seq[Int]].toNative(ci)))
     assertTrue(ci sameElements NativeConverter[immutable.Seq[Int]].fromNative(nativeArr))
 
-    val e = List(1,2,3)
+    val e = List(1, 2, 3)
     assertEquals(strArr, JSON.stringify(NativeConverter[List[Int]].toNative(e)))
     assertTrue(e sameElements NativeConverter[List[Int]].fromNative(nativeArr))
 
-    val f = ListBuffer(1,2,3)
+    val f = ListBuffer(1, 2, 3)
     assertEquals(strArr, JSON.stringify(NativeConverter[mutable.Buffer[Int]].toNative(f)))
     assertTrue(f sameElements NativeConverter[mutable.Buffer[Int]].fromNative(nativeArr))
 
@@ -212,14 +212,18 @@ class JsonTests:
     assertEquals(strMap, JSON.stringify(NativeConverter[immutable.Map[String, Int]].toNative(g)))
     assertEquals(g, NativeConverter[immutable.Map[String, Int]].fromNative(JSON.parse(strMap)))
 
-    val h = immutable.Set[Int](1,2,3)
+    val h = immutable.Set[Int](1, 2, 3)
     assertEquals(strArr, JSON.stringify(NativeConverter[immutable.Set[Int]].toNative(h)))
     assertEquals(h, NativeConverter[immutable.Set[Int]].fromNative(JSON.parse(strArr)))
+
+    val v = Vector(1, 2, 3)
+    assertEquals(strArr, JSON.stringify(NativeConverter[Vector[Int]].toNative(v)))
+    assertEquals(v, NativeConverter[Vector[Int]].fromNative(JSON.parse(strArr)))
 
     val composite = Array(Map("a" -> Set(1, 2, 3), "b" -> Set(4, 5, 6)))
     assertEquals(""" [{"a":[1,2,3],"b":[4,5,6]}]  """.trim, composite.toJson)
 
-    val some = Some(Array(1,2,3))
+    val some = Some(Array(1, 2, 3))
     val someStr = "[1,2,3]"
     assertEquals(someStr, JSON.stringify(some.toNative))
     assertEquals(some.get(1), NativeConverter[Option[Array[Int]]].fromNative(JSON.parse(someStr)).get(1))
@@ -255,7 +259,7 @@ class JsonTests:
       // not working, since no Mirror.Of[(Int | String)] provided..
 //    val nc: NativeConverter[Int|String] = NativeConverter.derived
 //    assertEquals(3, nc.fromNative(JSON.parse("3")))
-    
+
     // not working, since there is (correctly) no ValueOf[3|"X"]
     // and we can't make a less strict given because the above mirror
     // is unavailable
@@ -289,7 +293,6 @@ class JsonTests:
   end literalTypeDerivations
    */
 
-
   case class Node(children: List[Node]) derives NativeConverter
 
   @Test
@@ -299,6 +302,3 @@ class JsonTests:
       """ {"children":[{"children":[]},{"children":[]},{"children":[{"children":[]}]}]}  """.trim
     assertEquals(json, n.toJson)
     assertEquals(n, json.fromJson[Node])
-
-
-    
