@@ -7,7 +7,7 @@ lazy val root = crossProject(JVMPlatform, JSPlatform)
   .settings(
     organization := "org.getshaka",
     name := "native-converter",
-    version := "0.7.1-SNAPSHOT",
+    version := "0.8.0",
     versionScheme := Some("early-semver"),
     scalaVersion := "3.1.2",
 
