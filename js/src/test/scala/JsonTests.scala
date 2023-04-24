@@ -145,11 +145,11 @@ class JsonTests:
 
   @Test
   def jsonSimpleEnumTest: Unit =
-    assertEquals(""" "Adams" """.trim, JSON.stringify(Founder.Adams.toNative))
-    assertEquals(Founder.Washington, """ "Washington" """.fromJson[Founder])
+    assertEquals(""" {"@type":"Adams"} """.trim, JSON.stringify(Founder.Adams.toNative))
+    assertEquals(Founder.Washington, """ {"@type":"Washington"} """.fromJson[Founder])
 
-    assertEquals(""" "Blue" """.trim, JSON.stringify(Color.Blue.toNative))
-    assertEquals(0x00ff00, """ "Green" """.fromJson[Color].rgb)
+    assertEquals(""" {"@type":"Blue"} """.trim, JSON.stringify(Color.Blue.toNative))
+    assertEquals(0x00ff00, """ {"@type":"Green"} """.fromJson[Color].rgb)
 
     assertEquals(""" {"@type":"Nn"} """.trim, JSON.stringify(Opt.Nn.toNative))
     try

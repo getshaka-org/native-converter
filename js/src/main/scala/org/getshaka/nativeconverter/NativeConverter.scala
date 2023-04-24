@@ -541,7 +541,7 @@ object NativeConverter:
             val resArr = Array.ofDim[Any](constValue[Tuple.Size[Mets]])
             nativeToProduct[A, Mets, Mels](p, resArr, ps, jsDict)
 
-      case s: Mirror.SumOf[A] => sumConverter[A, Mets](s)
+      case s: Mirror.SumOf[A] => adtSumConverter[A](s)
 
   private inline def productToNative[Mets, Mels](
       p: Product,
@@ -582,59 +582,6 @@ object NativeConverter:
 
         resArr(i) = nc.fromNative(ps.atKey(key, elementJs))
         nativeToProduct[A, metsTail, melsTail](mirror, resArr, ps, jsDict, i + 1)
-
-  private inline def sumConverter[A, Mets](
-      m: Mirror.SumOf[A]
-  ): NativeConverter[A] =
-    inline erasedValue[Mets] match
-      case _: (met *: metsTail) =>
-        inline if isSingleton[met] then sumConverter[A, metsTail](m)
-        else adtSumConverter(m)
-
-      case _: EmptyTuple => simpleSumConverter(m)
-
-  /** A singleton is a Product with no parameter elements
-    */
-  private inline def isSingleton[T]: Boolean = summonFrom[T] {
-    case product: Mirror.ProductOf[T] =>
-      inline erasedValue[product.MirroredElemTypes] match
-        case _: EmptyTuple => true
-        case _             => false
-    case _ => false
-  }
-
-  private inline def simpleSumConverter[A](
-      m: Mirror.SumOf[A]
-  ): NativeConverter[A] =
-    type Mets = m.MirroredElemTypes
-    type Mels = m.MirroredElemLabels
-    type Label = m.MirroredLabel
-
-    new NativeConverter[A]:
-      extension (a: A) def toNative: js.Any = simpleSumToNative[Mels](m.ordinal(a))
-      def fromNative(ps: ParseState): A =
-        val name = ps.json.asInstanceOf[Any] match
-          case s: String => s
-          case _         => ps.fail("String")
-        simpleSumFromNative[A, Label, Mets, Mels](ps, name)
-
-  private inline def simpleSumToNative[Mels](n: Int, i: Int = 0): js.Any =
-    inline erasedValue[Mels] match
-      case _: EmptyTuple => // can never reach
-      case _: (mel *: melsTail) =>
-        if i == n then constValue[mel].asInstanceOf[js.Any]
-        else simpleSumToNative[melsTail](n, i + 1)
-
-  private inline def simpleSumFromNative[A, Label, Mets, Mels](
-      ps: ParseState,
-      name: String
-  ): A =
-    inline (erasedValue[Mets], erasedValue[Mels]) match
-      case _: (EmptyTuple, EmptyTuple) =>
-        ps.fail(s"a member of Sum type ${constValue[Label]}")
-      case _: (met *: metsTail, mel *: melsTail) =>
-        if constValue[mel] == name then summonInline[Mirror.ProductOf[met & A]].fromProduct(EmptyTuple)
-        else simpleSumFromNative[A, Label, metsTail, melsTail](ps, name)
 
   private inline def adtSumConverter[A](
       m: Mirror.SumOf[A]
