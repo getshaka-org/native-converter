@@ -225,12 +225,9 @@ Here is a sample cross-project you can clone: [https://github.com/AugustNagro/na
 
 ## Performance
 
-But what about performance, surely making your own js.Object subclasses is faster?
-Nope, derived NativeDecoders are 2x faster, even for simple cases like `User("John Smith", true, 42)`:
-
-![bench](native-converter-vs-js-object-bench.png)
-
 The generated JavaScript code is very clean. This is all possible because of Scala 3's [`inline`](https://dotty.epfl.ch/docs/reference/metaprogramming/inline.html) keyword, and powerful type-level programming capabilities. That's right.. no Macros used whatsoever! The `derives` keyword on type T causes the NativeConverter Typeclass to be auto-generated in T's companion object. Only once, and when first requested.
+
+Performance is improved by not using any internal AST, and by utilizing the natively-implemented JSON methods.
 
 ## Thanks
 
