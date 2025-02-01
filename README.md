@@ -2,7 +2,7 @@ A [Scala.js](https://www.scala-js.org/) project that makes it easy to convert to
 
 ```Scala
 import scala.scalajs.js
-import org.getshaka.nativeconverter.NativeConverter, fromJson, fromNative}
+import org.getshaka.nativeconverter.{NativeConverter, fromJson, fromNative}
 
 case class User(name: String, isAdmin: Boolean, age: Int) derives NativeConverter
 val u = User("John Smith", true, 42)
@@ -43,7 +43,7 @@ Then in `/build.sbt`, set the scala version and add the native-converter depende
 
 ```Scala
 libraryDependencies ++= Seq(
-  "org.getshaka" %%% "native-converter" % "0.8.0"
+  "org.getshaka" %%% "native-converter" % "0.9.0"
 )
 ```
 
